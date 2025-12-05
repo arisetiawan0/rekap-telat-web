@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <title>Rekap Keterlambatan Karyawan</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --primary: #2563eb;
+        --primary-dark: #1d4ed8;
+        --bg-gradient: radial-gradient(circle at top left, #1e293b, #1d4ed8, #0f172a);
+        --card-bg: #ffffff;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.25);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: var(--bg-gradient);
+        min-height: 100vh;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 12px;
+      }
+
+      .shell {
+        width: 100%;
+        max-width: 1100px;
+        background: radial-gradient(circle at top left, #ffffff 0%, #f9fafb 55%, #e5e7eb 120%);
+        border-radius: 24px;
+        box-shadow: var(--shadow-soft);
+        padding: 24px;
+      }
+
+      @media (min-width: 768px) {
+        .shell {
+          padding: 32px 36px;
+        }
+      }
+
+      /* HEADER */
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-logo {
+        width: 44px;
+        height: 44px;
+        border-radius: 16px;
+        background: linear-gradient(145deg, #111827, #1f2937);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        color: #f9fafb;
+        box-shadow: 0 12px 25px rgba(15, 23, 42, 0.4);
+      }
+
+      .brand-text h1 {
+        font-size: 22px;
+        margin: 0;
+        letter-spacing: 0.01em;
+      }
+
+      .brand-text p {
+        margin: 2px 0 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .chip {
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: rgba(37, 99, 235, 0.06);
+        color: var(--primary-dark);
+        border: 1px solid rgba(37, 99, 235, 0.18);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .chip-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.25);
+      }
+
+      /* MAIN LAYOUT */
+      .layout {
+        display: grid;
+        gap: 24px;
+      }
+
+      @media (min-width: 820px) {
+        .layout {
+          grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.1fr);
+          align-items: flex-start;
+        }
+      }
+
+      /* LEFT PANEL */
+      .panel-left h2 {
+        margin: 0 0 10px;
+        font-size: 20px;
+      }
+
+      .panel-left p.desc {
+        margin: 0 0 16px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .columns-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 16px;
+      }
+
+      .pill {
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #e5edff;
+        color: #1d4ed8;
+        font-size: 12px;
+        border: 1px solid #d1ddff;
+      }
+
+      .steps {
+        display: grid;
+        gap: 10px;
+        margin-top: 4px;
+      }
+
+      .step-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 13px;
+      }
+
+      .step-number {
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        border: 1px solid rgba(15, 23, 42, 0.15);
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+      }
+
+      .step-body span.label {
+        font-weight: 600;
+        margin-right: 4px;
+      }
+
+      .step-body div {
+        color: var(--muted);
+      }
+
+      .note {
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 11px;
+        background: #111827;
+        color: #e5e7eb;
+        padding: 2px 5px;
+        border-radius: 4px;
+      }
+
+      /* RIGHT PANEL (UPLOAD) */
+      .panel-right {
+        background: var(--card-bg);
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        padding: 18px 18px 20px;
+        box-shadow: 0 18px 35px rgba(15, 23, 42, 0.14);
+      }
+
+      .panel-right-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .panel-right-title {
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .tag-soft {
+        font-size: 11px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #f9fafb;
+        border: 1px dashed #d1d5db;
+        color: #6b7280;
+      }
+
+      .messages {
+        margin-bottom: 10px;
+        font-size: 13px;
+      }
+
+      .alert {
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #b91c1c;
+      }
+
+      .dropzone {
+        border: 1px dashed #cbd5f5;
+        background: #f5f7ff;
+        border-radius: 14px;
+        padding: 18px 16px;
+        text-align: center;
+        margin-bottom: 14px;
+      }
+
+      .dropzone-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+
+      .dropzone-sub {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+
+      input[type="file"] {
+        width: 100%;
+        font-size: 12px;
+      }
+
+      .btn-primary {
+        width: 100%;
+        margin-top: 12px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 9px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
+      }
+
+      .btn-primary:hover {
+        background: var(--primary-dark);
+      }
+
+      .btn-primary span.icon {
+        font-size: 15px;
+      }
+
+      .mini-meta {
+        font-size: 11px;
+        color: #9ca3af;
+        margin-top: 6px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="header">
+        <div class="brand">
+          <div class="brand-logo">HR</div>
+          <div class="brand-text">
+            <h1>Rekap Keterlambatan Karyawan</h1>
+            <p>
+              Alat internal untuk merapikan data absensi dan merekap semua kejadian
+              keterlambatan secara otomatis.
+            </p>
+          </div>
+        </div>
+        <div class="chip">
+          <span class="chip-dot"></span>
+          Mode validasi data: <strong>&nbsp;Aktif</strong>
+        </div>
+      </header>
+
+      <main class="layout">
+        <!-- Panel kiri -->
+        <section class="panel-left">
+          <h2>Cara kerja</h2>
+          <p class="desc">
+            Sistem membaca file absensi Excel dan hanya menampilkan baris
+            karyawan yang benar-benar terlambat, sekaligus menambahkan kolom
+            <strong>Total_Keterlambatan</strong> per orang.
+          </p>
+
+          <div>
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px">
+              Kolom yang wajib ada di sheet <code>Worksheet</code>:
+            </div>
+            <div class="columns-list">
+              <span class="pill">Full Name</span>
+              <span class="pill">Date</span>
+              <span class="pill">Check In</span>
+              <span class="pill">Check Out</span>
+              <span class="pill">Late In</span>
+              <span class="pill">Early Out</span>
+            </div>
+          </div>
+
+          <div class="steps">
+            <div class="step-item">
+              <div class="step-number">1</div>
+              <div class="step-body">
+                <span class="label">Upload file absensi</span>
+                <div>
+                  Pastikan format file sudah <strong>.xlsx</strong> dan sheet aktif
+                  bernama <code>Worksheet</code>.
+                </div>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-number">2</div>
+              <div class="step-body">
+                <span class="label">Pembersihan & pengolahan data</span>
+                <div>
+                  Nama dibersihkan, baris kosong diabaikan, dan nilai
+                  <em>Late In</em> dikonversi menjadi menit keterlambatan.
+                </div>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-number">3</div>
+              <div class="step-body">
+                <span class="label">Preview & unduh rekap</span>
+                <div>
+                  Hasil ditampilkan dalam bentuk tabel dan dapat diunduh sebagai
+                  <strong>rekap_semua_telat_clean.xlsx</strong>.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="note">
+            Jika file sumber masih <code>.xls</code>, buka terlebih dahulu di Excel
+            atau Google Sheets lalu simpan ulang sebagai
+            <code>.xlsx</code> sebelum di-upload.
+          </p>
+        </section>
+
+        <!-- Panel kanan -->
+        <section class="panel-right">
+          <div class="panel-right-header">
+            <div>
+              <div class="panel-right-title">Upload file absensi</div>
+              <div style="font-size: 12px; color: var(--muted); margin-top: 2px">
+                Sistem akan menampilkan hasil rekap sebelum Anda mengunduh.
+              </div>
+            </div>
+            <div class="tag-soft">Maks. 1 file • format .xlsx</div>
+          </div>
+
+          <div class="messages">
+            {% with messages = get_flashed_messages() %} {% if messages %} {% for
+            message in messages %}
+            <div class="alert">{{ message }}</div>
+            {% endfor %} {% endif %} {% endwith %}
+          </div>
+
+          <form
+            action="{{ url_for('process') }}"
+            method="post"
+            enctype="multipart/form-data"
+          >
+            <div class="dropzone">
+              <div class="dropzone-title">Pilih file Excel absensi</div>
+              <div class="dropzone-sub">
+                File harus memiliki sheet <code>Worksheet</code> dengan kolom
+                sesuai daftar di panel sebelah kiri.
+              </div>
+              <input type="file" name="file" accept=".xlsx" required />
+            </div>
+
+            <button type="submit" class="btn-primary">
+              <span class="icon">▶</span>
+              <span>Proses &amp; Lihat Rekap</span>
+            </button>
+
+            <div class="mini-meta">
+              <span>Engine: Python 3.13 (tanpa pandas).</span>
+              <span>Data hanya diproses di mesin lokal Anda.</span>
+            </div>
+          </form>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
