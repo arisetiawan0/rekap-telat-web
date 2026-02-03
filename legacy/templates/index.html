@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <title>Rekap Keterlambatan Karyawan</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+      :root {
+        /* Color Palette - Indigo/Slate Theme */
+        --primary: #4f46e5;
+        --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+        --primary-shadow: rgba(79, 70, 229, 0.3);
+        
+        --bg-body: #f1f5f9;
+        --surface: #ffffff;
+        
+        --text-main: #0f172a;
+        --text-secondary: #64748b;
+        --text-light: #94a3b8;
+        
+        --border: #e2e8f0;
+        --success-bg: #ecfdf5;
+        --success-text: #059669;
+        
+        /* 3D Shadows - Layered for depth */
+        --shadow-card: 
+          0 4px 6px -1px rgba(0, 0, 0, 0.05),
+          0 10px 15px -3px rgba(0, 0, 0, 0.05);
+          
+        --shadow-floating:
+          0 20px 25px -5px rgba(0, 0, 0, 0.08),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+        --radius: 20px;
+      }
+
+      * { box-sizing: border-box; outline: none; }
+
+      body {
+        margin: 0;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background: var(--bg-body);
+        color: var(--text-main);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Animation Fade In */
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .container {
+        max-width: 1024px;
+        margin: auto;
+        padding: 40px 24px;
+        width: 100%;
+        animation: fadeIn 0.6s ease-out forwards;
+      }
+
+      /* ===== HEADER ===== */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 40px;
+      }
+
+      .title-group h1 {
+        font-size: 26px;
+        font-weight: 700;
+        margin: 0;
+        background: -webkit-linear-gradient(0deg, #1e293b, #475569);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .title-group p {
+        margin: 6px 0 0;
+        color: var(--text-secondary);
+        font-size: 15px;
+      }
+
+      .badge {
+        background: var(--surface);
+        padding: 8px 16px;
+        border-radius: 99px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--success-text);
+        border: 1px solid #d1fae5;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .pulse-dot {
+        width: 8px;
+        height: 8px;
+        background: #10b981;
+        border-radius: 50%;
+        box-shadow: 0 0 0 2px #d1fae5;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+        70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+      }
+
+      /* ===== GRID ===== */
+      .grid {
+        display: grid;
+        gap: 32px;
+        grid-template-columns: 1fr;
+      }
+
+      @media (min-width: 860px) {
+        .grid {
+          grid-template-columns: 1.1fr 0.9fr;
+          align-items: start;
+        }
+      }
+
+      /* ===== CARDS ===== */
+      .card {
+        background: var(--surface);
+        border-radius: var(--radius);
+        padding: 32px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-card);
+      }
+
+      /* Info Section Styles */
+      .info-card {
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        font-weight: 700;
+        font-size: 18px;
+        color: var(--text-main);
+      }
+
+      .icon-box {
+        width: 36px;
+        height: 36px;
+        background: #e0e7ff;
+        color: var(--primary);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .description {
+        line-height: 1.7;
+        color: var(--text-secondary);
+        margin-bottom: 24px;
+        font-size: 15px;
+      }
+
+      .pill-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 30px;
+      }
+
+      .pill {
+        font-size: 12px;
+        padding: 6px 14px;
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text-secondary);
+        font-weight: 500;
+        transition: transform 0.2s;
+      }
+      .pill:hover { transform: translateY(-2px); border-color: #cbd5e1; }
+
+      .steps {
+        padding: 0;
+        margin: 0;
+        list-style: none;
+        position: relative;
+      }
+      
+      /* Vertical Line for Steps */
+      .steps::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 10px;
+        bottom: 10px;
+        width: 2px;
+        background: #e2e8f0;
+        z-index: 0;
+      }
+
+      .step-item {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 20px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .step-num {
+        width: 32px;
+        height: 32px;
+        background: var(--surface);
+        border: 2px solid #e2e8f0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--text-light);
+        flex-shrink: 0;
+        transition: all 0.3s;
+      }
+
+      .card:hover .step-num { border-color: var(--primary); color: var(--primary); }
+
+      .step-content strong { color: var(--text-main); display: block; margin-bottom: 2px; }
+      .step-content span { font-size: 13px; color: var(--text-secondary); }
+
+      /* ===== UPLOAD SECTION ===== */
+      .upload-card {
+        box-shadow: var(--shadow-floating);
+        border: 1px solid rgba(255,255,255,0.8);
+        position: relative;
+        overflow: hidden;
+      }
+      
+      /* Subtle Top Gradient Accent */
+      .upload-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 4px;
+        background: var(--primary-gradient);
+      }
+
+      /* Alert Style */
+      .alert {
+        background: #fef2f2;
+        border: 1px solid #fee2e2;
+        color: #ef4444;
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 14px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      /* Dropzone Area */
+      .dropzone-area {
+        border: 2px dashed #cbd5e1;
+        border-radius: 16px;
+        padding: 40px 20px;
+        text-align: center;
+        background: #f8fafc;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+      }
+
+      .dropzone-area.dragover {
+        border-color: var(--primary);
+        background: #eef2ff;
+        transform: scale(0.98);
+      }
+      
+      /* Hidden input */
+      .file-input {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        opacity: 0;
+        cursor: pointer;
+      }
+
+      .upload-icon {
+        width: 48px;
+        height: 48px;
+        color: var(--text-light);
+        margin-bottom: 12px;
+        transition: color 0.3s;
+      }
+
+      .dropzone-area:hover .upload-icon { color: var(--primary); }
+
+      .upload-text { font-weight: 600; color: var(--text-main); margin-bottom: 4px; }
+      .upload-hint { font-size: 13px; color: var(--text-secondary); }
+
+      /* Selected File State */
+      .file-selected {
+        display: none;
+        margin-top: 10px;
+        background: #fff;
+        padding: 8px 12px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--primary);
+        border: 1px solid #e0e7ff;
+      }
+
+      /* Action Button */
+      .btn-submit {
+        width: 100%;
+        margin-top: 24px;
+        padding: 16px;
+        border: none;
+        border-radius: 14px;
+        background: var(--primary-gradient);
+        color: white;
+        font-weight: 600;
+        font-size: 16px;
+        font-family: inherit;
+        cursor: pointer;
+        box-shadow: 0 4px 6px rgba(79, 70, 229, 0.25);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 12px rgba(79, 70, 229, 0.3);
+      }
+
+      .btn-submit:active {
+        transform: translateY(1px);
+      }
+
+      .btn-submit:disabled {
+        opacity: 0.7;
+        cursor: wait;
+        transform: none;
+      }
+
+      /* Footer Meta */
+      .security-note {
+        margin-top: 20px;
+        text-align: center;
+        font-size: 12px;
+        color: var(--text-light);
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        align-items: center;
+      }
+
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      
+      <div class="header">
+        <div class="title-group">
+          <h1>Rekap Keterlambatan</h1>
+          <p>Automated Attendance Processing Dashboard</p>
+        </div>
+        <div class="badge">
+          <div class="pulse-dot"></div>
+          System Active
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card info-card">
+          <div class="section-header">
+            <div class="icon-box">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            </div>
+            Workflow Sistem
+          </div>
+          
+          <p class="description">
+            Sistem ini menggunakan algoritma Python untuk membaca file <strong>Excel (.xlsx)</strong>, menghitung selisih waktu <em>Check In</em> terhadap jadwal, dan menghasilkan laporan instan karyawan yang terlambat.
+          </p>
+
+          <div class="pill-container">
+            <div class="pill">🆔 Employee ID</div>
+            <div class="pill">📅 Date</div>
+            <div class="pill">⏰ Check In</div>
+            <div class="pill">📊 Late Duration</div>
+          </div>
+
+          <ul class="steps">
+            <li class="step-item">
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <strong>Upload File</strong>
+                <span>Pastikan format file adalah .xlsx</span>
+              </div>
+            </li>
+            <li class="step-item">
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <strong>Auto-Calculation</strong>
+                <span>Sistem memfilter data keterlambatan</span>
+              </div>
+            </li>
+            <li class="step-item">
+              <div class="step-num">3</div>
+              <div class="step-content">
+                <strong>Download Result</strong>
+                <span>Preview dan unduh hasil rekap</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card upload-card">
+          <div class="section-header">
+            <div class="icon-box" style="background: #f0f9ff; color: #0284c7;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            Import Data Absensi
+          </div>
+
+          {% with messages = get_flashed_messages() %}
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  {{ message }}
+                </div>
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+
+          <form action="{{ url_for('process') }}" method="post" enctype="multipart/form-data" id="uploadForm">
+            
+            <div class="dropzone-area" id="dropzone">
+              <input type="file" name="file" accept=".xlsx" class="file-input" id="fileInput" required />
+              
+              <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              
+              <div class="upload-text">Klik atau Drag file Excel ke sini</div>
+              <div class="upload-hint">Maksimal ukuran 5MB (.xlsx)</div>
+              
+              <div id="fileInfo" class="file-selected">
+                📄 <span id="fileName">nama_file.xlsx</span>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn">
+              <span>Proses Data Sekarang</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+            </button>
+
+            <div class="security-note">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Data diproses lokal & tidak disimpan.
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // JAVASCRIPT UNTUK INTERAKSI UX
+      const dropzone = document.getElementById('dropzone');
+      const fileInput = document.getElementById('fileInput');
+      const fileInfo = document.getElementById('fileInfo');
+      const fileName = document.getElementById('fileName');
+      const uploadForm = document.getElementById('uploadForm');
+      const submitBtn = document.getElementById('submitBtn');
+
+      // 1. Efek Drag & Drop
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, preventDefaults, false);
+      });
+
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, () => dropzone.classList.add('dragover'), false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, () => dropzone.classList.remove('dragover'), false);
+      });
+
+      // 2. Tampilkan Nama File saat dipilih
+      dropzone.addEventListener('drop', handleDrop, false);
+      fileInput.addEventListener('change', handleFiles, false);
+
+      function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files; // Assign dropped files to input
+        handleFiles();
+      }
+
+      function handleFiles() {
+        if (fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+          fileName.textContent = file.name;
+          fileInfo.style.display = 'inline-block';
+          // Ubah icon/warna dropzone sedikit untuk feedback sukses
+          dropzone.style.borderColor = '#4f46e5';
+          dropzone.style.background = '#eff6ff';
+        }
+      }
+
+      // 3. Loading State pada Tombol Submit
+      uploadForm.addEventListener('submit', function() {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `
+          <svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite; margin-right: 8px;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          Memproses...
+        `;
+      });
+
+      // Style tambahan untuk animasi loading lewat JS
+      const style = document.createElement('style');
+      style.innerHTML = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
+      document.head.appendChild(style);
+    </script>
+  </body>
+</html>

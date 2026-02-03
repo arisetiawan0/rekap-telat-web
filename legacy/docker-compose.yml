@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  rekap-telat-web:
+    build: .
+    image: rekap-telat-web:latest
+    container_name: rekap-telat-app
+    volumes:
+      - .:/app
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+    restart: unless-stopped
+
+# CasaOS specific configuration
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+    - arm
+  main: rekap-telat-web
+  description:
+    en: "A web application to calculate employee lateness from attendance Excel files."
+  tagline:
+    en: "Easy Attendance Late Recap"
+  developer: "Your Name"
+  author: "Your Name"
+  icon: "https://cdn-icons-png.flaticon.com/512/2991/2991112.png"
+  thumbnail: "https://cdn-icons-png.flaticon.com/512/2991/2991112.png"
+  title:
+    en: "Rekap Telat"
+  category: "Business"
+  port_map: "5000"
