@@ -4,12 +4,15 @@ export interface AttendanceRecord {
     id: string;
     fullName: string;
     date: string;
+    shift: string; // Captured from "Shift" or "Shift Code"
     scheduleIn: string;
     scheduleOut: string;
     checkIn: string;
     checkOut: string;
     lateMinutes: number;
     totalLateCount: number;
+    isShiftAdjusted?: boolean; // New flag to indicate auto-detection
+    originalSchedule?: string; // To show what it was before adjustment
 }
 
 export interface SummaryStats {
@@ -21,6 +24,14 @@ export interface SummaryStats {
 
 const DEFAULT_WORK_START = "08:00";
 const DEFAULT_WORK_END = "17:00";
+const LATE_THRESHOLD_MINUTES = 130; // Max accepted late before checking other shifts
+
+// List of all valid shift start times provided by user
+const KNOWN_SHIFTS_START = [
+    "06:00", "06:30", "06:45", "07:00", "07:45",
+    "09:00", "10:00", "11:00", "12:00", "13:00",
+    "13:15", "13:45", "14:30", "14:45", "15:00"
+].map(s => ({ str: s, min: timeToMinutes(s) }));
 
 /**
  * Helper to find a column key in a row object based on a list of potential candidate names.
@@ -37,27 +48,19 @@ function findColumn(row: any, candidates: string[]): string | undefined {
 
 /**
  * Parsing logic for various time formats from Excel
- * Excel can store time as:
- * 1. Decimal (fraction of day, e.g. 0.33333)
- * 2. Formatted string "HH:MM"
- * 3. Date object (if cellDates: true)
  */
 function parseTime(val: any): string | null {
     if (val === null || val === undefined) return null;
 
-    // If it's a number (Excel serial date/time), convert to HH:MM
     if (typeof val === 'number') {
-        // Excel time is fraction of day
         const totalSeconds = Math.round(val * 24 * 3600);
         const hours = Math.floor(totalSeconds / 3600) % 24;
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     }
 
-    // If it's a string, try to parse HH:MM
     if (typeof val === 'string') {
         const trimmed = val.trim();
-        // Matches HH:MM or HH:MM:SS
         const match = trimmed.match(/(\d{1,2}):(\d{2})/);
         if (match) {
             const h = parseInt(match[1], 10);
@@ -66,7 +69,6 @@ function parseTime(val: any): string | null {
         }
     }
 
-    // If Date object
     if (val instanceof Date) {
         const h = val.getHours();
         const m = val.getMinutes();
@@ -81,12 +83,26 @@ function timeToMinutes(timeStr: string): number {
     return h * 60 + m;
 }
 
+function findNearestShift(checkInMinutes: number): string {
+    let bestShift = KNOWN_SHIFTS_START[0].str;
+    let minDiff = Math.abs(checkInMinutes - KNOWN_SHIFTS_START[0].min);
+
+    for (const shift of KNOWN_SHIFTS_START) {
+        const diff = Math.abs(checkInMinutes - shift.min);
+        if (diff < minDiff) {
+            minDiff = diff;
+            bestShift = shift.str;
+        }
+    }
+    return bestShift;
+}
+
 export async function processExcelFile(file: File): Promise<{
     data: AttendanceRecord[];
     summary: SummaryStats;
 }> {
     const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: 'array', cellDates: true }); // cellDates handles some date formats automatically
+    const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
     const firstSheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[firstSheetName];
     const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
@@ -97,9 +113,10 @@ export async function processExcelFile(file: File): Promise<{
 
     const firstRow = jsonData[0];
 
-    // Identifikasi kolom
+    // Identify columns
     const nameCol = findColumn(firstRow, ["Full Name", "Employee Name", "Name", "Nama"]);
     const dateCol = findColumn(firstRow, ["Date*", "Date", "Attendance Date", "Tanggal"]);
+    const shiftCol = findColumn(firstRow, ["Shift", "Shift Code", "Working Shift Code"]);
     const checkinCol = findColumn(firstRow, ["Check In", "Clock In", "In Time", "Jam Masuk"]);
     const scheduleInCol = findColumn(firstRow, ["Schedule In", "Shift In", "Jam Masuk Jadwal"]);
     const scheduleOutCol = findColumn(firstRow, ["Schedule Out", "Shift Out", "Jam Pulang Jadwal"]);
@@ -118,16 +135,36 @@ export async function processExcelFile(file: File): Promise<{
 
         const name = rawName.toString().trim();
         const checkInTime = parseTime(row[checkinCol]);
+        const shiftOrCode = shiftCol ? row[shiftCol]?.toString() : "";
 
-        // Schedule In (optional)
+        // Default or Parsed Schedule
+        let isOff = false;
         let scheduleTime = DEFAULT_WORK_START;
+        let scheduleOutTime = DEFAULT_WORK_END;
+        let originalScheduleTime = "";
+
         if (scheduleInCol) {
-            const parsedSched = parseTime(row[scheduleInCol]);
-            if (parsedSched) scheduleTime = parsedSched;
+            const rawSched = row[scheduleInCol];
+            // Check for OFF: Explicit "Off" text or "00:00" time
+            const rawSchedStr = rawSched ? rawSched.toString().toLowerCase() : "";
+
+            if (rawSchedStr.includes('off') || rawSchedStr.trim() === '') {
+                isOff = true;
+                scheduleTime = "";
+            } else {
+                const parsedSched = parseTime(rawSched);
+                if (parsedSched) {
+                    scheduleTime = parsedSched;
+                    originalScheduleTime = parsedSched;
+                    // Treat 00:00 as OFF
+                    if (scheduleTime === "00:00") {
+                        isOff = true;
+                        scheduleTime = "";
+                    }
+                }
+            }
         }
 
-        // Schedule Out (optional)
-        let scheduleOutTime = DEFAULT_WORK_END;
         if (scheduleOutCol) {
             const parsedSchedOut = parseTime(row[scheduleOutCol]);
             if (parsedSchedOut) scheduleOutTime = parsedSchedOut;
@@ -135,41 +172,80 @@ export async function processExcelFile(file: File): Promise<{
 
         if (!checkInTime) return; // Skip invalid checkin
 
-        // Calculate Late
-        const actualMin = timeToMinutes(checkInTime);
-        const schedMin = timeToMinutes(scheduleTime);
-        const diff = actualMin - schedMin;
-        const lateMinutes = diff > 0 ? diff : 0;
+        // MAIN LOGIC: Automatic Shift Detection
+        let finalScheduleIn = scheduleTime;
+        let isShiftAdjusted = false;
+        const checkInMin = timeToMinutes(checkInTime);
+        let lateMinutes = 0;
 
-        if (lateMinutes > 0) {
-            if (!lateCounts[name]) lateCounts[name] = 0;
-            lateCounts[name]++;
+        // CHECK 1: User is OFF (e.g. "00:00" or "Day Off") but present
+        if (isOff || scheduleTime === "") {
+            finalScheduleIn = findNearestShift(checkInMin);
+            isShiftAdjusted = true;
+            originalScheduleTime = "OFF";
+        }
+        else {
+            // CHECK 2: User is Scheduled but late > Threshold
+            const schedMin = timeToMinutes(scheduleTime);
+            let diff = checkInMin - schedMin;
+
+            if (diff > LATE_THRESHOLD_MINUTES) {
+                // Try to find a better matching shift
+                const nearestShiftStr = findNearestShift(checkInMin);
+                const nearestShiftMin = timeToMinutes(nearestShiftStr);
+
+                // Switch if nearest shift is closer to CheckIn than the original Schedule
+                // Example: Sched 07:45, CheckIn 13:45. Diff 360.
+                // Nearest 13:45. NewDiff 0. 
+                // 0 < 360 -> Switch.
+                if (Math.abs(checkInMin - nearestShiftMin) < Math.abs(diff)) {
+                    finalScheduleIn = nearestShiftStr;
+                    isShiftAdjusted = true;
+                    diff = checkInMin - nearestShiftMin;
+                }
+            }
+
+            lateMinutes = diff > 0 ? diff : 0;
+        }
+
+        // If adjusted, verify late minutes against NEW schedule
+        if (isShiftAdjusted) {
+            const newSchedMin = timeToMinutes(finalScheduleIn);
+            const newDiff = checkInMin - newSchedMin;
+            lateMinutes = newDiff > 0 ? newDiff : 0;
+        }
+
+        if (lateMinutes > 0 || isShiftAdjusted) { // Also push adjusted rows even if 0 late (to show they were present)
+            if (lateMinutes > 0) {
+                if (!lateCounts[name]) lateCounts[name] = 0;
+                lateCounts[name]++;
+            }
 
             processedRows.push({
                 id: Math.random().toString(36).substring(7),
                 fullName: name,
                 date: dateCol ? (row[dateCol] instanceof Date ? row[dateCol].toLocaleDateString('id-ID') : row[dateCol]?.toString() || "") : "",
-                scheduleIn: scheduleTime,
+                shift: shiftOrCode,
+                scheduleIn: finalScheduleIn,
                 scheduleOut: scheduleOutTime,
                 checkIn: checkInTime,
                 checkOut: checkoutCol ? (parseTime(row[checkoutCol]) || row[checkoutCol]?.toString() || "") : "",
                 lateMinutes: lateMinutes,
-                totalLateCount: 0 // Will fill later
+                totalLateCount: 0,
+                isShiftAdjusted,
+                originalSchedule: originalScheduleTime
             });
         }
     });
 
-    // Fill in totalLateCount
     const finalResults: AttendanceRecord[] = processedRows.map(r => ({
         ...r,
         totalLateCount: lateCounts[r.fullName] || 0
     })).sort((a, b) => {
-        // Sort by Name then Date (simple string sort for date currently)
         return a.fullName.localeCompare(b.fullName) || a.date.localeCompare(b.date);
     });
 
-    // Summary
-    const totalCases = finalResults.length;
+    const totalCases = finalResults.filter(r => r.lateMinutes > 0).length;
     const totalEmployees = Object.keys(lateCounts).length;
     const avgPerEmployee = totalEmployees ? parseFloat((totalCases / totalEmployees).toFixed(2)) : 0;
 
