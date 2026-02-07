@@ -190,11 +190,10 @@ export async function processExcelFile(
             let diff = checkInMin - schedMin;
 
             if (diff > lateThreshold) {
-                // Skip adjustment for HO (OPERASIONAL) shift N
-                const isHO = orgVal === "OPERASIONAL";
-                const isShiftN = shiftOrCode === "N";
+                // Skip adjustment for HO shift (identified by containing 'N')
+                const isShiftN = shiftOrCode?.toUpperCase().includes('N');
 
-                if (!(isHO && isShiftN)) {
+                if (!isShiftN) {
                     const nearestShiftStr = findNearestShift(checkInMin, customShifts);
                     const nearestShiftMin = timeToMinutes(nearestShiftStr);
 
