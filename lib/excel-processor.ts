@@ -120,6 +120,7 @@ export async function processExcelFile(
     const scheduleInCol = findColumn(firstRow, ["Schedule In", "Shift In", "Jam Masuk Jadwal"]);
     const scheduleOutCol = findColumn(firstRow, ["Schedule Out", "Shift Out", "Jam Pulang Jadwal"]);
     const checkoutCol = findColumn(firstRow, ["Check Out", "Clock Out", "Out Time", "Jam Pulang"]);
+    const orgCol = findColumn(firstRow, ["Organization", "Organisasi", "Org"]);
 
     if (!nameCol || !checkinCol) {
         throw new Error("Kolom wajib (Nama / Check In) tidak ditemukan.");
@@ -137,6 +138,7 @@ export async function processExcelFile(
         const name = rawName.toString().trim();
         const checkInTime = parseTime(row[checkinCol]);
         const shiftOrCode = shiftCol ? row[shiftCol]?.toString() : "";
+        const orgVal = orgCol ? row[orgCol]?.toString() : "";
         const rawDate = dateCol ? row[dateCol] : "";
         const dateStr = rawDate instanceof Date ? rawDate.toLocaleDateString('id-ID') : rawDate?.toString() || "";
 
@@ -188,13 +190,19 @@ export async function processExcelFile(
             let diff = checkInMin - schedMin;
 
             if (diff > lateThreshold) {
-                const nearestShiftStr = findNearestShift(checkInMin, customShifts);
-                const nearestShiftMin = timeToMinutes(nearestShiftStr);
+                // Skip adjustment for HO (OPERASIONAL) shift N
+                const isHO = orgVal === "OPERASIONAL";
+                const isShiftN = shiftOrCode === "N";
 
-                if (Math.abs(checkInMin - nearestShiftMin) < Math.abs(diff)) {
-                    finalScheduleIn = nearestShiftStr;
-                    isShiftAdjusted = true;
-                    diff = checkInMin - nearestShiftMin;
+                if (!(isHO && isShiftN)) {
+                    const nearestShiftStr = findNearestShift(checkInMin, customShifts);
+                    const nearestShiftMin = timeToMinutes(nearestShiftStr);
+
+                    if (Math.abs(checkInMin - nearestShiftMin) < Math.abs(diff)) {
+                        finalScheduleIn = nearestShiftStr;
+                        isShiftAdjusted = true;
+                        diff = checkInMin - nearestShiftMin;
+                    }
                 }
             }
             lateMinutes = diff > 0 ? diff : 0;
