@@ -1,26 +1,161 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* ============================================
+   Design Tokens
+   ============================================ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+    --color-background: #09090b;
+    --color-foreground: #fafafa;
+    --color-surface: #18181b;
+    --color-surface-hover: #27272a;
+    --color-border: rgba(255, 255, 255, 0.06);
+    --color-border-hover: rgba(255, 255, 255, 0.12);
+    --color-muted: #71717a;
+    --color-accent: #22d3ee;
+    --color-accent-dim: rgba(34, 211, 238, 0.1);
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ============================================
+   Global Base
+   ============================================ */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #27272a transparent;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #27272a;
+    border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #3f3f46;
+}
+
+html {
+    scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+    background: rgba(34, 211, 238, 0.2);
+    color: #fff;
+}
+
+/* ============================================
+   Glass Card Base
+   ============================================ */
+.glass-card {
+    background: rgba(24, 24, 27, 0.6);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 1.25rem;
+}
+
+.glass-card-hover:hover {
+    background: rgba(24, 24, 27, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================
+   Animated Gradient Glow
+   ============================================ */
+@keyframes glow-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.animate-glow {
+    animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+.animate-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+}
+
+/* ============================================
+   Sidebar
+   ============================================ */
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #a1a1aa;
+    transition: all 0.2s ease;
+}
+
+.sidebar-link:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: #e4e4e7;
+}
+
+.sidebar-link.active {
+    background: rgba(34, 211, 238, 0.08);
+    color: #22d3ee;
+    font-weight: 600;
+}
+
+/* ============================================
+   Stat Card Gradient Borders
+   ============================================ */
+.stat-border-red {
+    border-left: 3px solid #f87171;
+}
+
+.stat-border-blue {
+    border-left: 3px solid #60a5fa;
+}
+
+.stat-border-amber {
+    border-left: 3px solid #fbbf24;
+}
+
+.stat-border-purple {
+    border-left: 3px solid #a78bfa;
+}
+
+.stat-border-cyan {
+    border-left: 3px solid #22d3ee;
+}
+
+.stat-border-emerald {
+    border-left: 3px solid #34d399;
 }

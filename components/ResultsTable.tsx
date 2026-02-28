@@ -1,252 +1,306 @@
 'use client';
 
-import { AttendanceRecord } from '@/lib/excel-processor';
-import { ChevronLeft, ChevronRight, Search, Download, ArrowUpDown, ArrowUp, ArrowDown, Clock, AlertCircle, FileSpreadsheet } from 'lucide-react';
+import type { AttendanceRecord, SortConfig, FilterState } from '@/lib/types';
+import { cn, exportToExcel, exportToCSV, getSeverityLevel, getSeverityColor, getSeverityBg } from '@/lib/utils';
+import { ChevronLeft, ChevronRight, Search, ArrowUpDown, ArrowUp, ArrowDown, Clock, AlertCircle, FileSpreadsheet, Download, Filter, X } from 'lucide-react';
 import { useState, useMemo } from 'react';
-import * as XLSX from 'xlsx';
 import { motion } from 'framer-motion';
 
 interface ResultsTableProps {
     data: AttendanceRecord[];
 }
 
-type SortKey = keyof AttendanceRecord;
-type SortDirection = 'asc' | 'desc';
-
-interface SortConfig {
-    key: SortKey;
-    direction: SortDirection;
-}
-
-const ITEMS_PER_PAGE = 50;
+const ITEMS_PER_PAGE_OPTIONS = [25, 50, 100];
 
 export default function ResultsTable({ data }: ResultsTableProps) {
     const [currentPage, setCurrentPage] = useState(1);
-    const [searchQuery, setSearchQuery] = useState("");
+    const [itemsPerPage, setItemsPerPage] = useState(50);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+    const [showFilters, setShowFilters] = useState(false);
+    const [filters, setFilters] = useState<FilterState>({
+        search: '',
+        organization: '',
+        shift: '',
+        severity: '',
+        dateFrom: '',
+        dateTo: '',
+    });
 
-    const handleSort = (key: SortKey) => {
+    // Extract unique values for filter dropdowns
+    const organizations = useMemo(() => {
+        const orgs = new Set(data.map(d => d.organization).filter(Boolean));
+        return Array.from(orgs).sort() as string[];
+    }, [data]);
+
+    const shifts = useMemo(() => {
+        const s = new Set(data.map(d => d.shift).filter(Boolean));
+        return Array.from(s).sort();
+    }, [data]);
+
+    const activeFilterCount = [
+        filters.search, filters.organization, filters.shift,
+        filters.severity, filters.dateFrom, filters.dateTo
+    ].filter(Boolean).length;
+
+    // Sorting
+    const handleSort = (key: keyof AttendanceRecord) => {
         setSortConfig((current) => {
-            if (!current || current.key !== key) {
-                return { key, direction: 'asc' };
-            }
-            if (current.direction === 'asc') {
-                return { key, direction: 'desc' };
-            }
+            if (!current || current.key !== key) return { key, direction: 'asc' };
+            if (current.direction === 'asc') return { key, direction: 'desc' };
             return null;
         });
     };
 
-    const sortedData = useMemo(() => {
-        let processData = [...data];
+    // Filtered & sorted data
+    const processedData = useMemo(() => {
+        let result = [...data];
 
-        // Filter
-        if (searchQuery) {
-            const lowerQ = searchQuery.toLowerCase();
-            processData = processData.filter(item =>
-                item.fullName.toLowerCase().includes(lowerQ)
+        // Text search
+        if (filters.search) {
+            const q = filters.search.toLowerCase();
+            result = result.filter(item =>
+                item.fullName.toLowerCase().includes(q) || item.date.includes(q)
             );
+        }
+
+        // Organization filter
+        if (filters.organization) {
+            result = result.filter(item => item.organization === filters.organization);
+        }
+
+        // Shift filter
+        if (filters.shift) {
+            result = result.filter(item => item.shift === filters.shift);
+        }
+
+        // Severity filter
+        if (filters.severity) {
+            result = result.filter(item => getSeverityLevel(item.lateMinutes) === filters.severity);
         }
 
         // Sort
         if (sortConfig) {
-            processData.sort((a, b) => {
-                const aValue = a[sortConfig.key];
-                const bValue = b[sortConfig.key];
-
-                // Handle undefined values safely
-                if (aValue === undefined && bValue === undefined) return 0;
-                if (aValue === undefined) return 1;
-                if (bValue === undefined) return -1;
-
-                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+            result.sort((a, b) => {
+                const aVal = a[sortConfig.key];
+                const bVal = b[sortConfig.key];
+                if (aVal === undefined && bVal === undefined) return 0;
+                if (aVal === undefined) return 1;
+                if (bVal === undefined) return -1;
+                if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
                 return 0;
             });
         }
 
-        return processData;
-    }, [data, searchQuery, sortConfig]);
+        return result;
+    }, [data, filters, sortConfig]);
 
-    const totalPages = Math.ceil(sortedData.length / ITEMS_PER_PAGE);
-    const paginatedData = sortedData.slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
+    const totalPages = Math.ceil(processedData.length / itemsPerPage);
+    const paginatedData = processedData.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
     );
 
-    const handleDownload = () => {
-        const ws = XLSX.utils.json_to_sheet(sortedData.map(item => ({
-            "Nama Lengkap": item.fullName,
-            "Tanggal": item.date,
-            "Shift": item.shift, // Added Shift to export
-            "Jadwal Masuk": item.scheduleIn,
-            "Jadwal Pulang": item.scheduleOut,
-            "Check In": item.checkIn,
-            "Check Out": item.checkOut,
-            "Telat (Menit)": item.lateMinutes,
-            "Status Shift": item.isShiftAdjusted ? `Disesuaikan (${item.originalSchedule || 'OFF'})` : 'Sesuai',
-            "Total Keterlambatan": item.totalLateCount
-        })));
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Rekap Telat");
-        XLSX.writeFile(wb, "rekap_telat_export.xlsx");
+    const clearFilters = () => {
+        setFilters({ search: '', organization: '', shift: '', severity: '', dateFrom: '', dateTo: '' });
+        setCurrentPage(1);
     };
 
-    const SortIcon = ({ colKey }: { colKey: SortKey }) => {
-        if (sortConfig?.key !== colKey) return <ArrowUpDown className="w-4 h-4 text-gray-400 opacity-20 group-hover:opacity-100 transition-opacity" />;
+    // Column sort icon
+    const SortIcon = ({ colKey }: { colKey: keyof AttendanceRecord }) => {
+        if (sortConfig?.key !== colKey) return <ArrowUpDown className="w-3.5 h-3.5 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity" />;
         return sortConfig.direction === 'asc'
-            ? <ArrowUp className="w-4 h-4 text-cyan-400" />
-            : <ArrowDown className="w-4 h-4 text-cyan-400" />;
+            ? <ArrowUp className="w-3.5 h-3.5 text-cyan-400" />
+            : <ArrowDown className="w-3.5 h-3.5 text-cyan-400" />;
     };
 
-    const renderHeader = (label: string, key: SortKey) => (
+    const renderHeader = (label: string, key: keyof AttendanceRecord) => (
         <th
-            className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-white/5 transition-colors group select-none border-b border-white/5"
+            className="px-4 py-3 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer hover:bg-white/[0.02] transition-colors group select-none whitespace-nowrap"
             onClick={() => handleSort(key)}
         >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
                 <span>{label}</span>
                 <SortIcon colKey={key} />
             </div>
         </th>
     );
 
-    // Helpers for Badges
     const getLateColor = (minutes: number) => {
-        if (minutes > 60) return "text-red-400 bg-red-400/10 border-red-400/20";
-        if (minutes > 15) return "text-amber-400 bg-amber-400/10 border-amber-400/20";
-        return "text-emerald-400 bg-emerald-400/10 border-emerald-400/20"; // Just in case
-    };
-
-    const getShiftBadge = (shift: string) => {
-        if (!shift) return null;
-        const isOff = shift.toLowerCase().includes('off');
-        const isNight = shift.toLowerCase().includes('n');
-
-        let style = "bg-zinc-800 text-zinc-400 border-zinc-700";
-        if (isOff) style = "bg-rose-900/20 text-rose-400 border-rose-800/30";
-        else if (isNight) style = "bg-indigo-900/20 text-indigo-400 border-indigo-800/30";
-        else style = "bg-blue-900/20 text-blue-400 border-blue-800/30";
-
-        return (
-            <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${style} uppercase tracking-tight`}>
-                {shift}
-            </span>
-        );
+        if (minutes > 60) return 'text-red-400 bg-red-400/10 border-red-400/20';
+        if (minutes > 15) return 'text-amber-400 bg-amber-400/10 border-amber-400/20';
+        return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
     };
 
     return (
         <div className="flex flex-col gap-4">
-            {/* Header Actions */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-zinc-900/50 p-1 rounded-2xl backdrop-blur-sm border border-white/5">
-                <div className="relative w-full sm:w-80 group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-cyan-400 transition-colors" />
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                <div className="relative flex-1 group">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-cyan-400 transition-colors" />
                     <input
                         type="text"
-                        placeholder="Cari karyawan..."
-                        value={searchQuery}
-                        onChange={(e) => {
-                            setSearchQuery(e.target.value);
-                            setCurrentPage(1);
-                        }}
-                        className="w-full pl-10 pr-4 py-2.5 bg-black/20 border border-white/5 rounded-xl text-sm text-gray-300 placeholder:text-gray-600 focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-500/30 focus:outline-none transition-all"
+                        placeholder="Cari nama atau tanggal..."
+                        value={filters.search}
+                        onChange={(e) => { setFilters(f => ({ ...f, search: e.target.value })); setCurrentPage(1); }}
+                        className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/60 border border-white/[0.06] rounded-xl text-sm text-zinc-300 placeholder:text-zinc-700 focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/20 outline-none transition-all"
                     />
                 </div>
-
-                <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleDownload}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-emerald-900/20 border border-emerald-500/20 transition-all w-full sm:w-auto justify-center backdrop-blur-md"
-                >
-                    <FileSpreadsheet className="w-4 h-4" />
-                    Export Excel
-                </motion.button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={cn(
+                            'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all',
+                            showFilters || activeFilterCount > 0
+                                ? 'bg-cyan-500/[0.08] text-cyan-400 border-cyan-500/20'
+                                : 'bg-white/[0.02] text-zinc-400 border-white/[0.06] hover:bg-white/[0.04]'
+                        )}
+                    >
+                        <Filter className="w-4 h-4" />
+                        Filter
+                        {activeFilterCount > 0 && (
+                            <span className="w-5 h-5 rounded-full bg-cyan-500 text-white text-[10px] font-bold flex items-center justify-center">
+                                {activeFilterCount}
+                            </span>
+                        )}
+                    </button>
+                    <div className="relative group/export">
+                        <button className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold border border-emerald-500/20 transition-all">
+                            <Download className="w-4 h-4" />
+                            Export
+                        </button>
+                        <div className="absolute right-0 top-full mt-1 w-40 bg-zinc-900 border border-white/[0.06] rounded-xl shadow-2xl overflow-hidden opacity-0 invisible group-hover/export:opacity-100 group-hover/export:visible transition-all z-20">
+                            <button onClick={() => exportToExcel(processedData)} className="w-full px-4 py-2.5 text-left text-sm text-zinc-300 hover:bg-white/[0.04] flex items-center gap-2">
+                                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                                Excel (.xlsx)
+                            </button>
+                            <button onClick={() => exportToCSV(processedData)} className="w-full px-4 py-2.5 text-left text-sm text-zinc-300 hover:bg-white/[0.04] flex items-center gap-2">
+                                <FileSpreadsheet className="w-4 h-4 text-blue-400" />
+                                CSV (.csv)
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
+            {/* Filter Panel */}
+            {showFilters && (
+                <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="glass-card p-4 flex flex-wrap gap-3 items-center"
+                >
+                    {organizations.length > 0 && (
+                        <select
+                            value={filters.organization}
+                            onChange={e => { setFilters(f => ({ ...f, organization: e.target.value })); setCurrentPage(1); }}
+                            className="px-3 py-2 bg-zinc-900/80 border border-white/[0.06] rounded-xl text-sm text-zinc-400 outline-none min-w-[160px]"
+                        >
+                            <option value="">Semua Organisasi</option>
+                            {organizations.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                    )}
+                    <select
+                        value={filters.shift}
+                        onChange={e => { setFilters(f => ({ ...f, shift: e.target.value })); setCurrentPage(1); }}
+                        className="px-3 py-2 bg-zinc-900/80 border border-white/[0.06] rounded-xl text-sm text-zinc-400 outline-none min-w-[120px]"
+                    >
+                        <option value="">Semua Shift</option>
+                        {shifts.map(s => <option key={s} value={s}>Shift {s}</option>)}
+                    </select>
+                    <select
+                        value={filters.severity}
+                        onChange={e => { setFilters(f => ({ ...f, severity: e.target.value })); setCurrentPage(1); }}
+                        className="px-3 py-2 bg-zinc-900/80 border border-white/[0.06] rounded-xl text-sm text-zinc-400 outline-none min-w-[130px]"
+                    >
+                        <option value="">Semua Tingkat</option>
+                        <option value="ringan">Ringan (≤15m)</option>
+                        <option value="sedang">Sedang (16-60m)</option>
+                        <option value="berat">Berat (&gt;60m)</option>
+                    </select>
+                    {activeFilterCount > 0 && (
+                        <button
+                            onClick={clearFilters}
+                            className="flex items-center gap-1.5 px-3 py-2 text-xs text-red-400 hover:text-red-300 transition-colors"
+                        >
+                            <X className="w-3 h-3" />
+                            Clear All
+                        </button>
+                    )}
+                    <div className="ml-auto text-xs text-zinc-500">
+                        {processedData.length} record
+                    </div>
+                </motion.div>
+            )}
+
             {/* Table */}
-            <div className="bg-zinc-950/50 rounded-2xl border border-white/5 overflow-hidden shadow-2xl backdrop-blur-sm">
+            <div className="glass-card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-zinc-900/80 backdrop-blur">
+                        <thead className="bg-zinc-900/50 border-b border-white/[0.04]">
                             <tr>
-                                {renderHeader("Nama Lengkap", "fullName")}
-                                {renderHeader("Tanggal", "date")}
-                                {renderHeader("Shift", "shift")}
-                                {renderHeader("Jadwal Masuk", "scheduleIn")}
-                                {renderHeader("Jadwal Pulang", "scheduleOut")}
-                                {renderHeader("Check In", "checkIn")}
-                                {renderHeader("Check Out", "checkOut")}
-                                {renderHeader("Telat (Menit)", "lateMinutes")}
-                                {renderHeader("Total Akumulasi", "totalLateCount")}
+                                {renderHeader('Nama', 'fullName')}
+                                {renderHeader('Tanggal', 'date')}
+                                {renderHeader('Shift', 'shift')}
+                                {renderHeader('Jadwal', 'scheduleIn')}
+                                {renderHeader('Check In', 'checkIn')}
+                                {renderHeader('Telat', 'lateMinutes')}
+                                {renderHeader('Total', 'totalLateCount')}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-white/[0.03]">
                             {paginatedData.length > 0 ? (
-                                paginatedData.map((row, idx) => (
-                                    <tr
-                                        key={row.id}
-                                        className="hover:bg-white/[0.02] transition-colors group"
-                                    >
-                                        <td className="px-6 py-4">
+                                paginatedData.map((row) => (
+                                    <tr key={row.id} className="hover:bg-white/[0.015] transition-colors group">
+                                        <td className="px-4 py-3">
                                             <div className="flex flex-col">
-                                                <span className="font-medium text-gray-200 group-hover:text-white transition-colors">
-                                                    {row.fullName}
-                                                </span>
+                                                <span className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors">{row.fullName}</span>
+                                                {row.organization && (
+                                                    <span className="text-[10px] text-zinc-600 mt-0.5">{row.organization}</span>
+                                                )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">
-                                            {row.date}
+                                        <td className="px-4 py-3 text-sm text-zinc-500 font-mono">{row.date}</td>
+                                        <td className="px-4 py-3">
+                                            {row.shift ? (
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-medium border bg-zinc-800/50 text-zinc-400 border-zinc-700/50 uppercase">
+                                                    {row.shift}
+                                                </span>
+                                            ) : <span className="text-zinc-600 text-xs">-</span>}
                                         </td>
-                                        <td className="px-6 py-4">
-                                            {getShiftBadge(row.shift)}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-mono text-gray-400">
-                                            <div className="flex items-center gap-2">
+                                        <td className="px-4 py-3 text-sm font-mono text-zinc-400">
+                                            <div className="flex items-center gap-1.5">
                                                 {row.scheduleIn}
                                                 {row.isShiftAdjusted && (
-                                                    <div className="group/tooltip relative">
-                                                        <motion.span
-                                                            initial={{ scale: 0 }} animate={{ scale: 1 }}
-                                                            className="flex items-center justify-center w-5 h-5 bg-cyan-900/30 text-cyan-400 rounded-full text-xs cursor-help border border-cyan-500/20"
-                                                        >
-                                                            <Clock className="w-3 h-3" />
-                                                        </motion.span>
-                                                        <div className="absolute left-0 bottom-full mb-2 w-max max-w-[200px] p-2 bg-black/90 border border-white/10 text-gray-300 text-xs rounded-lg opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-50 backdrop-blur-xl shadow-xl">
-                                                            <p className="font-semibold text-cyan-400 mb-0.5">Smart Shift Detected</p>
-                                                            Jadwal asli: <span className="text-white font-mono">{row.originalSchedule || "OFF"}</span>
+                                                    <div className="group/tip relative">
+                                                        <span className="flex items-center justify-center w-4 h-4 bg-cyan-900/30 text-cyan-400 rounded-full cursor-help border border-cyan-500/20">
+                                                            <Clock className="w-2.5 h-2.5" />
+                                                        </span>
+                                                        <div className="absolute left-0 bottom-full mb-1.5 w-max max-w-[180px] p-2 bg-zinc-900 border border-white/[0.08] text-zinc-300 text-[11px] rounded-lg opacity-0 group-hover/tip:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
+                                                            <p className="font-semibold text-cyan-400 mb-0.5">Smart Shift</p>
+                                                            Asli: <span className="text-white font-mono">{row.originalSchedule || 'OFF'}</span>
                                                         </div>
                                                     </div>
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm font-mono text-gray-500">
-                                            {row.scheduleOut}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-mono text-gray-300">
-                                            {row.checkIn}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-mono text-gray-500">
-                                            {row.checkOut || "-"}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border ${getLateColor(row.lateMinutes)}`}>
+                                        <td className="px-4 py-3 text-sm font-mono text-zinc-300">{row.checkIn}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border', getLateColor(row.lateMinutes))}>
                                                 <AlertCircle className="w-3 h-3" />
                                                 {row.lateMinutes}m
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500 font-mono">
-                                            {row.totalLateCount}
-                                        </td>
+                                        <td className="px-4 py-3 text-sm text-zinc-500 font-mono text-center">{row.totalLateCount}</td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={9} className="px-6 py-24 text-center">
-                                        <div className="flex flex-col items-center gap-3 text-gray-600">
-                                            <Search className="w-12 h-12 opacity-20" />
-                                            <p className="text-lg font-medium">Tidak ada data ditemukan</p>
-                                            <p className="text-sm">Coba kata kunci lain atau upload file baru.</p>
+                                    <td colSpan={7} className="px-4 py-20 text-center">
+                                        <div className="flex flex-col items-center gap-2 text-zinc-600">
+                                            <Search className="w-10 h-10 opacity-20" />
+                                            <p className="text-sm font-medium">Tidak ada data ditemukan</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -256,23 +310,35 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                 </div>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="flex items-center justify-between px-6 py-4 border-t border-white/5 bg-zinc-900/30">
-                        <div className="text-sm text-gray-500">
-                            Hal. <span className="font-medium text-gray-300">{currentPage}</span> dari <span className="font-medium text-gray-300">{totalPages}</span>
+                {totalPages > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-white/[0.04] bg-zinc-900/30">
+                        <div className="flex items-center gap-3 text-xs text-zinc-500">
+                            <span>Tampilkan</span>
+                            <select
+                                value={itemsPerPage}
+                                onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                className="bg-zinc-800 border border-white/[0.06] rounded-lg px-2 py-1 text-zinc-300 outline-none"
+                            >
+                                {ITEMS_PER_PAGE_OPTIONS.map(n => (
+                                    <option key={n} value={n}>{n}</option>
+                                ))}
+                            </select>
+                            <span>per halaman</span>
+                            <span className="text-zinc-600">•</span>
+                            <span>Hal. <span className="text-zinc-300 font-medium">{currentPage}</span> dari <span className="text-zinc-300 font-medium">{totalPages}</span></span>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1.5">
                             <button
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
-                                className="p-2 rounded-lg hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-400 hover:text-white"
+                                className="p-1.5 rounded-lg hover:bg-white/[0.04] disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-zinc-400"
                             >
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
-                                className="p-2 rounded-lg hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-400 hover:text-white"
+                                className="p-1.5 rounded-lg hover:bg-white/[0.04] disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-zinc-400"
                             >
                                 <ChevronRight className="w-4 h-4" />
                             </button>
