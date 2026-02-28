@@ -51,16 +51,16 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
     return (
         <aside
             className={cn(
-                'hidden lg:flex flex-col h-screen bg-zinc-950/80 backdrop-blur-xl border-r border-white/[0.04] transition-all duration-300 sticky top-0',
+                'hidden lg:flex flex-col h-screen bg-zinc-950/80 backdrop-blur-xl border-r border-white/4 transition-all duration-300 sticky top-0',
                 collapsed ? 'w-[72px]' : 'w-[260px]'
             )}
         >
             {/* Brand */}
             <div className={cn(
-                'flex items-center h-16 px-4 border-b border-white/[0.04] shrink-0',
+                'flex items-center h-16 px-4 border-b border-white/4 shrink-0',
                 collapsed ? 'justify-center' : 'gap-3'
             )}>
-                <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 bg-linear-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center shrink-0">
                     <Activity className="w-4 h-4 text-white" />
                 </div>
                 {!collapsed && (
@@ -73,7 +73,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
 
             {/* Data Status Indicator */}
             {data.length > 0 && !collapsed && (
-                <div className="mx-3 mt-3 p-2.5 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/10">
+                <div className="mx-3 mt-3 p-2.5 rounded-xl bg-emerald-500/6 border border-emerald-500/10">
                     <div className="flex items-center gap-2">
                         <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                         <span className="text-[11px] text-emerald-300 font-medium truncate">{currentFileName}</span>
@@ -117,10 +117,10 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
             </nav>
 
             {/* Collapse Toggle */}
-            <div className="p-3 border-t border-white/[0.04] shrink-0">
+            <div className="p-3 border-t border-white/4 shrink-0">
                 <button
                     onClick={onToggle}
-                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl hover:bg-white/[0.04] text-zinc-500 hover:text-zinc-300 transition-colors text-xs"
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl hover:bg-white/4 text-zinc-500 hover:text-zinc-300 transition-colors text-xs"
                 >
                     {collapsed ? <ChevronRight className="w-4 h-4" /> : (
                         <>
@@ -139,14 +139,14 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
 // ============================================
 function MobileHeader({ onMenuOpen }: { onMenuOpen: () => void }) {
     return (
-        <header className="lg:hidden sticky top-0 z-50 flex items-center justify-between h-14 px-4 bg-zinc-950/90 backdrop-blur-xl border-b border-white/[0.04]">
+        <header className="lg:hidden sticky top-0 z-50 flex items-center justify-between h-14 px-4 bg-zinc-950/90 backdrop-blur-xl border-b border-white/4">
             <div className="flex items-center gap-3">
-                <div className="w-7 h-7 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center">
+                <div className="w-7 h-7 bg-linear-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center">
                     <Activity className="w-3.5 h-3.5 text-white" />
                 </div>
                 <h1 className="text-sm font-bold text-white">Rekap Telat</h1>
             </div>
-            <button onClick={onMenuOpen} className="p-2 rounded-lg hover:bg-white/[0.04] text-zinc-400">
+            <button onClick={onMenuOpen} className="p-2 rounded-lg hover:bg-white/4 text-zinc-400">
                 <Menu className="w-5 h-5" />
             </button>
         </header>
@@ -175,11 +175,11 @@ function MobileDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
                         animate={{ x: 0 }}
                         exit={{ x: '-100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed top-0 left-0 h-full w-72 bg-zinc-950 border-r border-white/[0.04] z-[101] lg:hidden"
+                        className="fixed top-0 left-0 h-full w-72 bg-zinc-950 border-r border-white/4 z-[101] lg:hidden"
                     >
-                        <div className="flex items-center justify-between h-14 px-4 border-b border-white/[0.04]">
+                        <div className="flex items-center justify-between h-14 px-4 border-b border-white/4">
                             <h2 className="text-sm font-bold text-white">Menu</h2>
-                            <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.04] text-zinc-400">
+                            <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/4 text-zinc-400">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>

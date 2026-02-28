@@ -74,10 +74,10 @@ export default function FileUpload({ onFileSelect, isProcessing }: FileUploadPro
                 className={cn(
                     'relative group cursor-pointer flex flex-col items-center justify-center w-full h-72 rounded-2xl transition-all duration-300 border-2 border-dashed',
                     isDragOver
-                        ? 'border-cyan-500/50 bg-cyan-500/[0.06] shadow-[0_0_40px_rgba(34,211,238,0.15)] scale-[1.01]'
+                        ? 'border-cyan-500/50 bg-cyan-500/6 shadow-[0_0_40px_rgba(34,211,238,0.15)] scale-[1.01]'
                         : stagedFile
-                            ? 'border-emerald-500/30 bg-emerald-500/[0.04]'
-                            : 'border-white/[0.08] bg-white/[0.01] hover:bg-white/[0.02] hover:border-white/[0.12]',
+                            ? 'border-emerald-500/30 bg-emerald-500/4'
+                            : 'border-white/8 bg-white/1 hover:bg-white/2 hover:border-white/12',
                     isProcessing && 'opacity-50 pointer-events-none'
                 )}
                 onDragOver={handleDragOver}
@@ -126,7 +126,7 @@ export default function FileUpload({ onFileSelect, isProcessing }: FileUploadPro
                                     </p>
                                 </div>
 
-                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[11px] text-zinc-600">
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/2 border border-white/4 text-[11px] text-zinc-600">
                                     <FileSpreadsheet className="w-3 h-3" />
                                     Format: .xlsx, .xls
                                 </div>
@@ -153,14 +153,14 @@ export default function FileUpload({ onFileSelect, isProcessing }: FileUploadPro
                                 <div className="flex gap-3 w-full max-w-xs">
                                     <button
                                         onClick={clearFile}
-                                        className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.06] text-zinc-400 text-sm font-medium transition-colors border border-white/[0.06]"
+                                        className="flex-1 px-4 py-2.5 rounded-xl bg-white/4 hover:bg-white/6 text-zinc-400 text-sm font-medium transition-colors border border-white/6"
                                     >
                                         Ganti File
                                     </button>
                                     <button
                                         onClick={handleProcess}
                                         disabled={isProcessing}
-                                        className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-sm font-semibold shadow-lg shadow-cyan-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                        className="flex-1 px-4 py-2.5 rounded-xl bg-linear-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-sm font-semibold shadow-lg shadow-cyan-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                     >
                                         {isProcessing ? (
                                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />

@@ -20,7 +20,7 @@ interface AnalyticsDashboardProps {
 const CustomTooltip = ({ active, payload, label, unit }: any) => {
     if (active && payload && payload.length) {
         return (
-            <div className="bg-zinc-950/95 backdrop-blur-xl border border-white/[0.08] p-3 rounded-xl shadow-2xl">
+            <div className="bg-zinc-950/95 backdrop-blur-xl border border-white/8 p-3 rounded-xl shadow-2xl">
                 <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
                     {label || payload[0].name}
                 </p>
@@ -138,13 +138,13 @@ export default function AnalyticsDashboard({ stats }: AnalyticsDashboardProps) {
                             </p>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-2 w-full sm:w-48 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                    <div className="flex flex-col gap-2 w-full sm:w-48 p-3 rounded-xl bg-white/2 border border-white/4">
                         {stats.shiftDistribution.slice(0, 6).map((item, i) => (
                             <div
                                 key={i}
                                 onMouseEnter={() => setActiveShiftIdx(i)}
                                 onMouseLeave={() => setActiveShiftIdx(undefined)}
-                                className={`flex items-center justify-between text-xs cursor-pointer p-1.5 rounded-lg transition-colors ${activeShiftIdx === i ? 'bg-white/[0.04]' : ''}`}
+                                className={`flex items-center justify-between text-xs cursor-pointer p-1.5 rounded-lg transition-colors ${activeShiftIdx === i ? 'bg-white/4' : ''}`}
                             >
                                 <div className="flex items-center gap-2">
                                     <div className={`w-2 h-2 rounded-full transition-transform ${activeShiftIdx === i ? 'scale-150' : ''}`} style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
@@ -232,13 +232,13 @@ export default function AnalyticsDashboard({ stats }: AnalyticsDashboardProps) {
                             </p>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-3 w-full sm:w-48 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                    <div className="flex flex-col gap-3 w-full sm:w-48 p-3 rounded-xl bg-white/2 border border-white/4">
                         {stats.severityBreakdown.map((item, i) => (
                             <div
                                 key={i}
                                 onMouseEnter={() => setActiveSevIdx(i)}
                                 onMouseLeave={() => setActiveSevIdx(undefined)}
-                                className={`flex items-center justify-between text-xs cursor-pointer p-1.5 rounded-lg transition-colors ${activeSevIdx === i ? 'bg-white/[0.04]' : ''}`}
+                                className={`flex items-center justify-between text-xs cursor-pointer p-1.5 rounded-lg transition-colors ${activeSevIdx === i ? 'bg-white/4' : ''}`}
                             >
                                 <div className="flex items-center gap-2">
                                     <div className={`w-2 h-2 rounded-full ${activeSevIdx === i ? 'scale-150' : ''} transition-transform`} style={{ backgroundColor: item.color }} />

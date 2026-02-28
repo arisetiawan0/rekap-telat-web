@@ -116,7 +116,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
 
     const renderHeader = (label: string, key: keyof AttendanceRecord) => (
         <th
-            className="px-4 py-3 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer hover:bg-white/[0.02] transition-colors group select-none whitespace-nowrap"
+            className="px-4 py-3 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer hover:bg-white/2 transition-colors group select-none whitespace-nowrap"
             onClick={() => handleSort(key)}
         >
             <div className="flex items-center gap-1.5">
@@ -143,7 +143,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                         placeholder="Cari nama atau tanggal..."
                         value={filters.search}
                         onChange={(e) => { setFilters(f => ({ ...f, search: e.target.value })); setCurrentPage(1); }}
-                        className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/60 border border-white/[0.06] rounded-xl text-sm text-zinc-300 placeholder:text-zinc-700 focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/20 outline-none transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 bg-zinc-900/60 border border-white/6 rounded-xl text-sm text-zinc-300 placeholder:text-zinc-700 focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/20 outline-none transition-all"
                     />
                 </div>
                 <div className="flex gap-2">
@@ -152,8 +152,8 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                         className={cn(
                             'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all',
                             showFilters || activeFilterCount > 0
-                                ? 'bg-cyan-500/[0.08] text-cyan-400 border-cyan-500/20'
-                                : 'bg-white/[0.02] text-zinc-400 border-white/[0.06] hover:bg-white/[0.04]'
+                                ? 'bg-cyan-500/8 text-cyan-400 border-cyan-500/20'
+                                : 'bg-white/2 text-zinc-400 border-white/6 hover:bg-white/4'
                         )}
                     >
                         <Filter className="w-4 h-4" />
@@ -169,12 +169,12 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                             <Download className="w-4 h-4" />
                             Export
                         </button>
-                        <div className="absolute right-0 top-full mt-1 w-40 bg-zinc-900 border border-white/[0.06] rounded-xl shadow-2xl overflow-hidden opacity-0 invisible group-hover/export:opacity-100 group-hover/export:visible transition-all z-20">
-                            <button onClick={() => exportToExcel(processedData)} className="w-full px-4 py-2.5 text-left text-sm text-zinc-300 hover:bg-white/[0.04] flex items-center gap-2">
+                        <div className="absolute right-0 top-full mt-1 w-40 bg-zinc-900 border border-white/6 rounded-xl shadow-2xl overflow-hidden opacity-0 invisible group-hover/export:opacity-100 group-hover/export:visible transition-all z-20">
+                            <button onClick={() => exportToExcel(processedData)} className="w-full px-4 py-2.5 text-left text-sm text-zinc-300 hover:bg-white/4 flex items-center gap-2">
                                 <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
                                 Excel (.xlsx)
                             </button>
-                            <button onClick={() => exportToCSV(processedData)} className="w-full px-4 py-2.5 text-left text-sm text-zinc-300 hover:bg-white/[0.04] flex items-center gap-2">
+                            <button onClick={() => exportToCSV(processedData)} className="w-full px-4 py-2.5 text-left text-sm text-zinc-300 hover:bg-white/4 flex items-center gap-2">
                                 <FileSpreadsheet className="w-4 h-4 text-blue-400" />
                                 CSV (.csv)
                             </button>
@@ -195,7 +195,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                         <select
                             value={filters.organization}
                             onChange={e => { setFilters(f => ({ ...f, organization: e.target.value })); setCurrentPage(1); }}
-                            className="px-3 py-2 bg-zinc-900/80 border border-white/[0.06] rounded-xl text-sm text-zinc-400 outline-none min-w-[160px]"
+                            className="px-3 py-2 bg-zinc-900/80 border border-white/6 rounded-xl text-sm text-zinc-400 outline-none min-w-[160px]"
                         >
                             <option value="">Semua Organisasi</option>
                             {organizations.map(o => <option key={o} value={o}>{o}</option>)}
@@ -204,7 +204,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                     <select
                         value={filters.shift}
                         onChange={e => { setFilters(f => ({ ...f, shift: e.target.value })); setCurrentPage(1); }}
-                        className="px-3 py-2 bg-zinc-900/80 border border-white/[0.06] rounded-xl text-sm text-zinc-400 outline-none min-w-[120px]"
+                        className="px-3 py-2 bg-zinc-900/80 border border-white/6 rounded-xl text-sm text-zinc-400 outline-none min-w-[120px]"
                     >
                         <option value="">Semua Shift</option>
                         {shifts.map(s => <option key={s} value={s}>Shift {s}</option>)}
@@ -212,7 +212,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                     <select
                         value={filters.severity}
                         onChange={e => { setFilters(f => ({ ...f, severity: e.target.value })); setCurrentPage(1); }}
-                        className="px-3 py-2 bg-zinc-900/80 border border-white/[0.06] rounded-xl text-sm text-zinc-400 outline-none min-w-[130px]"
+                        className="px-3 py-2 bg-zinc-900/80 border border-white/6 rounded-xl text-sm text-zinc-400 outline-none min-w-[130px]"
                     >
                         <option value="">Semua Tingkat</option>
                         <option value="ringan">Ringan (≤15m)</option>
@@ -238,7 +238,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
             <div className="glass-card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-zinc-900/50 border-b border-white/[0.04]">
+                        <thead className="bg-zinc-900/50 border-b border-white/4">
                             <tr>
                                 {renderHeader('Nama', 'fullName')}
                                 {renderHeader('Tanggal', 'date')}
@@ -249,10 +249,10 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                                 {renderHeader('Total', 'totalLateCount')}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/[0.03]">
+                        <tbody className="divide-y divide-white/3">
                             {paginatedData.length > 0 ? (
                                 paginatedData.map((row) => (
-                                    <tr key={row.id} className="hover:bg-white/[0.015] transition-colors group">
+                                    <tr key={row.id} className="hover:bg-white/1.5 transition-colors group">
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors">{row.fullName}</span>
@@ -277,7 +277,7 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                                                         <span className="flex items-center justify-center w-4 h-4 bg-cyan-900/30 text-cyan-400 rounded-full cursor-help border border-cyan-500/20">
                                                             <Clock className="w-2.5 h-2.5" />
                                                         </span>
-                                                        <div className="absolute left-0 bottom-full mb-1.5 w-max max-w-[180px] p-2 bg-zinc-900 border border-white/[0.08] text-zinc-300 text-[11px] rounded-lg opacity-0 group-hover/tip:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
+                                                        <div className="absolute left-0 bottom-full mb-1.5 w-max max-w-[180px] p-2 bg-zinc-900 border border-white/8 text-zinc-300 text-[11px] rounded-lg opacity-0 group-hover/tip:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
                                                             <p className="font-semibold text-cyan-400 mb-0.5">Smart Shift</p>
                                                             Asli: <span className="text-white font-mono">{row.originalSchedule || 'OFF'}</span>
                                                         </div>
@@ -311,13 +311,13 @@ export default function ResultsTable({ data }: ResultsTableProps) {
 
                 {/* Pagination */}
                 {totalPages > 0 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-white/[0.04] bg-zinc-900/30">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-white/4 bg-zinc-900/30">
                         <div className="flex items-center gap-3 text-xs text-zinc-500">
                             <span>Tampilkan</span>
                             <select
                                 value={itemsPerPage}
                                 onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                                className="bg-zinc-800 border border-white/[0.06] rounded-lg px-2 py-1 text-zinc-300 outline-none"
+                                className="bg-zinc-800 border border-white/6 rounded-lg px-2 py-1 text-zinc-300 outline-none"
                             >
                                 {ITEMS_PER_PAGE_OPTIONS.map(n => (
                                     <option key={n} value={n}>{n}</option>
@@ -331,14 +331,14 @@ export default function ResultsTable({ data }: ResultsTableProps) {
                             <button
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
-                                className="p-1.5 rounded-lg hover:bg-white/[0.04] disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-zinc-400"
+                                className="p-1.5 rounded-lg hover:bg-white/4 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-zinc-400"
                             >
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
-                                className="p-1.5 rounded-lg hover:bg-white/[0.04] disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-zinc-400"
+                                className="p-1.5 rounded-lg hover:bg-white/4 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-zinc-400"
                             >
                                 <ChevronRight className="w-4 h-4" />
                             </button>

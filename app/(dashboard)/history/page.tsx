@@ -60,7 +60,7 @@ export default function HistoryPage() {
                 <button
                     onClick={() => refreshSessions()}
                     disabled={sessionsLoading}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] rounded-xl border border-white/[0.06] transition-all disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white bg-white/3 hover:bg-white/6 rounded-xl border border-white/6 transition-all disabled:opacity-50"
                 >
                     <RefreshCw className={cn('w-4 h-4', sessionsLoading && 'animate-spin')} />
                     Refresh
@@ -159,7 +159,7 @@ function SessionCard({
             <div className="p-5 flex flex-col sm:flex-row gap-4">
                 {/* Left: File Info */}
                 <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className="p-3 bg-cyan-500/[0.08] rounded-xl shrink-0">
+                    <div className="p-3 bg-cyan-500/8 rounded-xl shrink-0">
                         <FileSpreadsheet className="w-5 h-5 text-cyan-400" />
                     </div>
                     <div className="flex-1 min-w-0">
