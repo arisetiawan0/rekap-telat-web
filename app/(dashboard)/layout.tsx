@@ -15,6 +15,7 @@ import {
     X,
     Activity,
     FileSpreadsheet,
+    GitCompareArrows,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ const NAV_GROUPS = [
         items: [
             { href: '/upload', label: 'Upload', icon: Upload },
             { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+            { href: '/comparison', label: 'Perbandingan', icon: GitCompareArrows },
             { href: '/history', label: 'Riwayat', icon: History },
             { href: '/employees', label: 'Karyawan', icon: Users },
         ],

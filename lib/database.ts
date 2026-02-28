@@ -306,3 +306,63 @@ export async function getAllEmployeesAggregated(): Promise<EmployeeSummary[]> {
 
     return employees;
 }
+
+// ============================================
+// Records by Date Range (Cross-Session)
+// ============================================
+
+export async function getRecordsByDateRange(
+    dateFrom: string,
+    dateTo: string
+): Promise<AttendanceRecord[]> {
+    const supabase = getSupabase();
+    if (!supabase) return [];
+
+    let allRecords: RecordRow[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+        const { data, error } = await supabase
+            .from('records')
+            .select('*')
+            .gte('date', dateFrom)
+            .lte('date', dateTo)
+            .order('full_name', { ascending: true })
+            .order('date', { ascending: true })
+            .range(from, from + pageSize - 1);
+
+        if (error) {
+            console.error('Failed to fetch records by date range:', error);
+            break;
+        }
+
+        if (data && data.length > 0) {
+            allRecords = allRecords.concat(data as RecordRow[]);
+            from += pageSize;
+            hasMore = data.length === pageSize;
+        } else {
+            hasMore = false;
+        }
+    }
+
+    return allRecords.map((r: RecordRow) => ({
+        id: r.id,
+        fullName: r.full_name,
+        date: r.date,
+        shift: r.shift,
+        scheduleIn: r.schedule_in,
+        scheduleOut: r.schedule_out,
+        checkIn: r.check_in,
+        checkOut: r.check_out,
+        lateMinutes: r.late_minutes,
+        totalLateCount: r.total_late_count,
+        isShiftAdjusted: r.is_shift_adjusted,
+        originalSchedule: r.original_schedule,
+        organization: r.organization,
+        jobPosition: r.job_position,
+        jobLevel: r.job_level,
+        employmentStatus: r.employment_status,
+    }));
+}
