@@ -4,7 +4,10 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     GitCompareArrows,
-    CalendarRange,
+    FileSpreadsheet,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     Loader2,
     AlertTriangle,
     Users,
@@ -21,7 +24,8 @@ import {
     ResponsiveContainer, Cell, AreaChart, Area, Legend,
 } from 'recharts';
 import { cn, formatDuration, formatPercentChange, computePeriodStats, CHART_COLORS } from '@/lib/utils';
-import { getRecordsByDateRange } from '@/lib/database';
+import { getSessionById } from '@/lib/database';
+import { useData } from '@/lib/context';
 import type { AttendanceRecord } from '@/lib/types';
 
 // ============================================
@@ -138,23 +142,170 @@ function StatCard({ label, icon: Icon, valueA, valueB, unitA, unitB, iconColor, 
 }
 
 // ============================================
+// Custom Select Component
+// ============================================
+function CustomSelect({
+    value,
+    onChange,
+    options,
+    placeholder,
+    iconColorClass,
+    disabledIds = []
+}: {
+    value: string;
+    onChange: (val: string) => void;
+    options: { id: string; label: string }[];
+    placeholder: string;
+    iconColorClass: string;
+    disabledIds?: string[];
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const selectedOption = options.find(o => o.id === value);
+
+    return (
+        <div className="relative group">
+            {/* Click Catcher to close when clicking outside */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsOpen(false)}
+                />
+            )}
+
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full pl-10 pr-10 py-3 bg-zinc-900/80 hover:bg-zinc-800/80 border border-white/6 hover:border-white/10 rounded-xl text-sm outline-none transition-all cursor-pointer flex items-center justify-between z-10 relative ${isOpen ? 'ring-1 ring-cyan-500/30' : ''}`}
+            >
+                <div className={`absolute left-3 text-zinc-500 transition-colors pointer-events-none ${isOpen ? iconColorClass : 'group-hover:' + iconColorClass}`}>
+                    <FileSpreadsheet className="w-4 h-4" />
+                </div>
+
+                <span className={`block truncate ${!selectedOption ? 'text-zinc-500' : 'text-zinc-300'}`}>
+                    {selectedOption ? selectedOption.label : placeholder}
+                </span>
+
+                <div className="absolute right-3 text-zinc-600 pointer-events-none">
+                    <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </div>
+            </div>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute top-full left-0 right-0 mt-2 py-2 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto"
+                    >
+                        {options.map(opt => {
+                            const isDisabled = disabledIds.includes(opt.id);
+                            return (
+                                <div
+                                    key={opt.id}
+                                    onClick={() => {
+                                        if (isDisabled) return;
+                                        onChange(opt.id);
+                                        setIsOpen(false);
+                                    }}
+                                    className={`px-4 py-2.5 text-sm transition-colors ${isDisabled
+                                        ? 'text-zinc-600 bg-zinc-900/50 cursor-not-allowed'
+                                        : value === opt.id
+                                            ? 'bg-white/10 text-white cursor-default font-medium'
+                                            : 'text-zinc-300 hover:bg-white/5 cursor-pointer'
+                                        }`}
+                                >
+                                    {opt.label}
+                                </div>
+                            );
+                        })}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
+// ============================================
 // Main Page Component
 // ============================================
 export default function ComparisonPage() {
-    // Period A date inputs
-    const [aFrom, setAFrom] = useState('');
-    const [aTo, setATo] = useState('');
-    // Period B date inputs
-    const [bFrom, setBFrom] = useState('');
-    const [bTo, setBTo] = useState('');
+    // Session IDs
+    const [sessionAId, setSessionAId] = useState('');
+    const [sessionBId, setSessionBId] = useState('');
+
+    const { sessions } = useData();
+
+    // Compute available periods from sessions history
+    const availablePeriods = useMemo(() => {
+        return sessions.map(session => {
+            try {
+                const summary = JSON.parse(session.summary_json);
+                if (!summary.trends || summary.trends.length === 0) return null;
+
+                // Helper function to extract time values for sorting
+                const dateToTime = (dStr: string) => {
+                    if (dStr.includes('/')) {
+                        const [d, m, y] = dStr.split('/').map(Number);
+                        return new Date(y, m - 1, d).getTime();
+                    } else if (dStr.includes('-')) {
+                        const [y, m, d] = dStr.split('-').map(Number);
+                        return new Date(y, m - 1, d).getTime();
+                    }
+                    return new Date(dStr).getTime();
+                };
+
+                // Sort trends to ensure we get absolute min and max dates
+                const sortedTrends = [...summary.trends].sort((a, b) =>
+                    dateToTime(a.date) - dateToTime(b.date)
+                );
+
+                const firstDateStr = sortedTrends[0].date;
+                const lastDateStr = sortedTrends[sortedTrends.length - 1].date;
+
+                const parseDate = (dStr: string) => {
+                    // Try parsing DD/MM/YYYY
+                    if (dStr.includes('/')) {
+                        const partsSlash = dStr.split('/');
+                        if (partsSlash.length === 3) {
+                            const [d, m, y] = partsSlash;
+                            return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                        }
+                    }
+                    // Try parsing YYYY-MM-DD
+                    if (dStr.includes('-')) {
+                        const partsDash = dStr.split('-');
+                        if (partsDash.length === 3) {
+                            const [y, m, d] = partsDash;
+                            return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                        }
+                    }
+                    return dStr; // Fallback to raw string
+                };
+
+                return {
+                    id: session.id,
+                    name: session.file_name,
+                    from: parseDate(firstDateStr),
+                    to: parseDate(lastDateStr),
+                    label: `${session.file_name} (${firstDateStr} — ${lastDateStr})`
+                };
+            } catch (e) {
+                console.error('Failed to parse available period', e);
+                return null;
+            }
+        }).filter(Boolean) as { id: string; name: string; from: string; to: string; label: string }[];
+    }, [sessions]);
 
     const [periodA, setPeriodA] = useState<PeriodData | null>(null);
     const [periodB, setPeriodB] = useState<PeriodData | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [empSearch, setEmpSearch] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(50);
 
-    const canCompare = aFrom && aTo && bFrom && bTo;
+    const canCompare = sessionAId && sessionBId && sessionAId !== sessionBId;
 
     // ============================================
     // Fetch & Compare
@@ -164,32 +315,35 @@ export default function ComparisonPage() {
         setIsLoading(true);
         setError(null);
         try {
-            const [recordsA, recordsB] = await Promise.all([
-                getRecordsByDateRange(aFrom, aTo),
-                getRecordsByDateRange(bFrom, bTo),
+            const [resultA, resultB] = await Promise.all([
+                getSessionById(sessionAId),
+                getSessionById(sessionBId),
             ]);
 
-            if (recordsA.length === 0 && recordsB.length === 0) {
-                setError('Tidak ada data ditemukan untuk kedua periode. Pastikan tanggal yang dipilih sesuai dengan data yang sudah diupload.');
+            if (!resultA || !resultB) {
+                setError('Data sesi tidak ditemukan. Mungkin file sudah dihapus.');
                 setPeriodA(null);
                 setPeriodB(null);
                 setIsLoading(false);
                 return;
             }
 
+            const infoA = availablePeriods.find(p => p.id === sessionAId);
+            const infoB = availablePeriods.find(p => p.id === sessionBId);
+
             setPeriodA({
                 label: 'Periode A',
-                dateFrom: aFrom,
-                dateTo: aTo,
-                records: recordsA,
-                stats: computePeriodStats(recordsA),
+                dateFrom: infoA?.from || 'N/A',
+                dateTo: infoA?.to || 'N/A',
+                records: resultA.records,
+                stats: computePeriodStats(resultA.records),
             });
             setPeriodB({
                 label: 'Periode B',
-                dateFrom: bFrom,
-                dateTo: bTo,
-                records: recordsB,
-                stats: computePeriodStats(recordsB),
+                dateFrom: infoB?.from || 'N/A',
+                dateTo: infoB?.to || 'N/A',
+                records: resultB.records,
+                stats: computePeriodStats(resultB.records),
             });
         } catch (err) {
             setError('Gagal mengambil data. Periksa koneksi dan coba lagi.');
@@ -257,6 +411,12 @@ export default function ComparisonPage() {
         const q = empSearch.toLowerCase();
         return employeeDeltas.filter(e => e.name.toLowerCase().includes(q) || e.organization.toLowerCase().includes(q));
     }, [employeeDeltas, empSearch]);
+
+    const totalPages = Math.ceil(filteredDeltas.length / itemsPerPage);
+    const paginatedDeltas = useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage;
+        return filteredDeltas.slice(start, start + itemsPerPage);
+    }, [filteredDeltas, currentPage, itemsPerPage]);
 
     // ============================================
     // Computed: Severity Comparison Chart Data
@@ -337,24 +497,14 @@ export default function ComparisonPage() {
                             <h3 className="text-sm font-bold text-white">Periode A</h3>
                             <span className="text-[10px] text-zinc-600">(Baseline)</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <CalendarRange className="w-4 h-4 text-zinc-600 shrink-0" />
-                            <input
-                                type="date"
-                                value={aFrom}
-                                onChange={e => setAFrom(e.target.value)}
-                                className="flex-1 px-3 py-2 bg-zinc-900/80 border border-white/6 rounded-lg text-sm text-zinc-300 outline-none focus:ring-1 focus:ring-cyan-500/30"
-                                placeholder="Dari"
-                            />
-                            <span className="text-zinc-600 text-xs">—</span>
-                            <input
-                                type="date"
-                                value={aTo}
-                                onChange={e => setATo(e.target.value)}
-                                className="flex-1 px-3 py-2 bg-zinc-900/80 border border-white/6 rounded-lg text-sm text-zinc-300 outline-none focus:ring-1 focus:ring-cyan-500/30"
-                                placeholder="Sampai"
-                            />
-                        </div>
+
+                        <CustomSelect
+                            value={sessionAId}
+                            onChange={setSessionAId}
+                            options={availablePeriods}
+                            placeholder="Pilih file / sesi upload..."
+                            iconColorClass="text-cyan-400"
+                        />
                     </div>
 
                     {/* Period B */}
@@ -364,24 +514,15 @@ export default function ComparisonPage() {
                             <h3 className="text-sm font-bold text-white">Periode B</h3>
                             <span className="text-[10px] text-zinc-600">(Perbandingan)</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <CalendarRange className="w-4 h-4 text-zinc-600 shrink-0" />
-                            <input
-                                type="date"
-                                value={bFrom}
-                                onChange={e => setBFrom(e.target.value)}
-                                className="flex-1 px-3 py-2 bg-zinc-900/80 border border-white/6 rounded-lg text-sm text-zinc-300 outline-none focus:ring-1 focus:ring-purple-500/30"
-                                placeholder="Dari"
-                            />
-                            <span className="text-zinc-600 text-xs">—</span>
-                            <input
-                                type="date"
-                                value={bTo}
-                                onChange={e => setBTo(e.target.value)}
-                                className="flex-1 px-3 py-2 bg-zinc-900/80 border border-white/6 rounded-lg text-sm text-zinc-300 outline-none focus:ring-1 focus:ring-purple-500/30"
-                                placeholder="Sampai"
-                            />
-                        </div>
+
+                        <CustomSelect
+                            value={sessionBId}
+                            onChange={setSessionBId}
+                            options={availablePeriods}
+                            placeholder="Pilih file / sesi upload..."
+                            iconColorClass="text-purple-400"
+                            disabledIds={sessionAId ? [sessionAId] : []}
+                        />
                     </div>
                 </div>
 
@@ -409,7 +550,10 @@ export default function ComparisonPage() {
                         )}
                     </button>
                     {!canCompare && (
-                        <p className="text-xs text-zinc-600">Pilih rentang tanggal untuk kedua periode</p>
+                        <p className="text-xs text-zinc-600 flex items-center gap-2">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            {(!sessionAId || !sessionBId) ? 'Pilih dua file yang berbeda untuk dibandingkan' : 'File A dan File B tidak boleh sama'}
+                        </p>
                     )}
                 </div>
             </motion.div>
@@ -441,14 +585,14 @@ export default function ComparisonPage() {
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-cyan-500/8 border border-cyan-500/15 rounded-lg">
                                 <div className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
                                 <span className="text-cyan-300 font-medium">Periode A:</span>
-                                <span className="text-zinc-400">{aFrom} → {aTo}</span>
+                                <span className="text-zinc-400">{periodA.dateFrom} → {periodA.dateTo}</span>
                                 <span className="text-cyan-500 font-bold">({periodA.records.length} record)</span>
                             </div>
                             <ArrowRight className="w-4 h-4 text-zinc-600" />
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/8 border border-purple-500/15 rounded-lg">
                                 <div className="w-2.5 h-2.5 rounded-full bg-purple-400" />
                                 <span className="text-purple-300 font-medium">Periode B:</span>
-                                <span className="text-zinc-400">{bFrom} → {bTo}</span>
+                                <span className="text-zinc-400">{periodB.dateFrom} → {periodB.dateTo}</span>
                                 <span className="text-purple-500 font-bold">({periodB.records.length} record)</span>
                             </div>
                         </div>
@@ -612,7 +756,10 @@ export default function ComparisonPage() {
                                         type="text"
                                         placeholder="Cari karyawan..."
                                         value={empSearch}
-                                        onChange={e => setEmpSearch(e.target.value)}
+                                        onChange={e => {
+                                            setEmpSearch(e.target.value);
+                                            setCurrentPage(1); // Reset page on query
+                                        }}
                                         className="w-full pl-10 pr-4 py-2 bg-zinc-900/80 border border-white/6 rounded-lg text-sm text-zinc-300 outline-none focus:ring-1 focus:ring-cyan-500/30"
                                     />
                                 </div>
@@ -631,7 +778,7 @@ export default function ComparisonPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredDeltas.slice(0, 50).map((emp, i) => {
+                                        {paginatedDeltas.map((emp, i) => {
                                             const cfg = statusConfig[emp.status];
                                             const StatusIcon = cfg.icon;
                                             return (
@@ -682,10 +829,47 @@ export default function ComparisonPage() {
                                         })}
                                     </tbody>
                                 </table>
-                                {filteredDeltas.length > 50 && (
-                                    <p className="text-center text-xs text-zinc-600 py-3">
-                                        Menampilkan 50 dari {filteredDeltas.length} karyawan. Gunakan pencarian untuk filter.
-                                    </p>
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-between px-4 py-4 border-t border-white/5">
+                                        <div className="flex items-center gap-3 text-sm text-zinc-400">
+                                            <span>Tampilkan</span>
+                                            <div className="relative">
+                                                <select
+                                                    value={itemsPerPage}
+                                                    onChange={(e) => {
+                                                        setItemsPerPage(Number(e.target.value));
+                                                        setCurrentPage(1);
+                                                    }}
+                                                    className="appearance-none bg-zinc-900 border border-white/10 rounded-lg pl-3 pr-8 py-1.5 outline-none hover:border-white/20 transition-colors cursor-pointer"
+                                                >
+                                                    <option value="10">10</option>
+                                                    <option value="25">25</option>
+                                                    <option value="50">50</option>
+                                                    <option value="100">100</option>
+                                                </select>
+                                                <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500" />
+                                            </div>
+                                            <span>per halaman</span>
+                                            <span className="text-zinc-600 px-1">•</span>
+                                            <span>Hal. <span className="text-zinc-200 font-medium">{currentPage}</span> dari {totalPages}</span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                                disabled={currentPage === 1}
+                                                className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent rounded-lg transition-colors"
+                                            >
+                                                <ChevronLeft className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                                disabled={currentPage === totalPages}
+                                                className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent rounded-lg transition-colors"
+                                            >
+                                                <ChevronRight className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
                                 )}
                                 {filteredDeltas.length === 0 && (
                                     <p className="text-center text-sm text-zinc-600 py-8">
