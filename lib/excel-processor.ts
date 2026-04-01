@@ -2,7 +2,6 @@ import * as XLSX from 'xlsx';
 import type {
     AttendanceRecord,
     EmployeeSummary,
-    SummaryStats,
     ProcessingResult,
 } from './types';
 import { getSeverityLevel } from './utils';

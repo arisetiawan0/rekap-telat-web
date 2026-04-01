@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Users, ChevronDown, ChevronUp, Calendar, Clock, Loader2, RefreshCw } from 'lucide-react';
+import { Search, Users, ChevronDown, ChevronUp, Calendar, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDuration } from '@/lib/utils';
 import { getAllEmployeesAggregated } from '@/lib/database';
@@ -36,6 +36,7 @@ function getAvatarColor(name: string) {
 export default function EmployeesPage() {
     const [employees, setEmployees] = useState<EmployeeSummary[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [orgFilter, setOrgFilter] = useState('');
     const [sortBy, setSortBy] = useState<'count' | 'minutes' | 'name'>('count');
@@ -44,9 +45,17 @@ export default function EmployeesPage() {
     // Fetch all employees from DB
     const loadEmployees = async () => {
         setLoading(true);
-        const data = await getAllEmployeesAggregated();
-        setEmployees(data);
-        setLoading(false);
+        setLoadError(null);
+        try {
+            const data = await getAllEmployeesAggregated();
+            setEmployees(data);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Gagal memuat data karyawan.';
+            setEmployees([]);
+            setLoadError(message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -93,6 +102,32 @@ export default function EmployeesPage() {
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
                 <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mb-4" />
                 <p className="text-sm text-zinc-500">Memuat data karyawan dari semua session...</p>
+            </div>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
+                <div className="w-20 h-20 bg-zinc-800/50 rounded-2xl flex items-center justify-center">
+                    <Users className="w-8 h-8 text-zinc-500" />
+                </div>
+                <div className="space-y-2">
+                    <h2 className="text-xl font-bold text-white">Gagal Memuat Data Karyawan</h2>
+                    <p className="text-sm text-zinc-500 max-w-xl mx-auto">
+                        {loadError}
+                    </p>
+                    <p className="text-sm text-zinc-600 max-w-xl mx-auto">
+                        Pastikan `DATABASE_URL` TiDB valid dan route API bisa terhubung ke database.
+                    </p>
+                </div>
+                <button
+                    onClick={loadEmployees}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white bg-white/3 hover:bg-white/6 rounded-xl border border-white/6 transition-all"
+                >
+                    <RefreshCw className="w-4 h-4" />
+                    Coba Lagi
+                </button>
             </div>
         );
     }

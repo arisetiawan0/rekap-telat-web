@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
+    type LucideIcon,
     GitCompareArrows,
     FileSpreadsheet,
     ChevronDown,
@@ -21,9 +22,9 @@ import {
 } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, Cell, AreaChart, Area, Legend,
+    ResponsiveContainer, AreaChart, Area, Legend,
 } from 'recharts';
-import { cn, formatDuration, formatPercentChange, computePeriodStats, CHART_COLORS } from '@/lib/utils';
+import { cn, formatDuration, formatPercentChange, computePeriodStats } from '@/lib/utils';
 import { getSessionById } from '@/lib/database';
 import { useData } from '@/lib/context';
 import type { AttendanceRecord } from '@/lib/types';
@@ -52,15 +53,27 @@ interface EmployeeDelta {
     status: 'improved' | 'worsened' | 'new' | 'resolved' | 'same';
 }
 
+interface ChartTooltipEntry {
+    color?: string;
+    name?: string;
+    value?: string | number;
+}
+
+interface ChartTooltipProps {
+    active?: boolean;
+    label?: string;
+    payload?: ChartTooltipEntry[];
+}
+
 // ============================================
 // Custom Chart Tooltip
 // ============================================
-function ChartTooltip({ active, payload, label }: any) {
+function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
     if (!active || !payload?.length) return null;
     return (
         <div className="bg-zinc-900/95 border border-white/10 rounded-xl px-4 py-3 shadow-2xl backdrop-blur-xl">
             <p className="text-xs text-zinc-400 mb-2 font-medium">{label}</p>
-            {payload.map((entry: any, i: number) => (
+            {payload.map((entry, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm">
                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
                     <span className="text-zinc-300">{entry.name}:</span>
@@ -95,7 +108,7 @@ function DeltaBadge({ oldVal, newVal, invertColor = false }: { oldVal: number; n
 // ============================================
 function StatCard({ label, icon: Icon, valueA, valueB, unitA, unitB, iconColor, iconBg }: {
     label: string;
-    icon: any;
+    icon: LucideIcon;
     valueA: string | number;
     valueB: string | number;
     unitA?: string;
@@ -778,7 +791,7 @@ export default function ComparisonPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {paginatedDeltas.map((emp, i) => {
+                                        {paginatedDeltas.map((emp) => {
                                             const cfg = statusConfig[emp.status];
                                             const StatusIcon = cfg.icon;
                                             return (

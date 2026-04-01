@@ -23,27 +23,37 @@ const DEFAULT_SHIFTS = [
 
 const DEFAULT_THRESHOLD = 130;
 
-export default function SettingsPanel({ isOpen, onClose, onSettingsChange }: SettingsPanelProps) {
-    const [shifts, setShifts] = useState<string[]>(DEFAULT_SHIFTS);
-    const [threshold, setThreshold] = useState<number>(DEFAULT_THRESHOLD);
-    const [newShift, setNewShift] = useState("");
+function loadInitialSettings(): AppSettings {
+    if (typeof window === 'undefined') {
+        return { shifts: DEFAULT_SHIFTS, threshold: DEFAULT_THRESHOLD };
+    }
 
-    // Load from LocalStorage
+    const saved = localStorage.getItem('rekap_telat_settings');
+    if (!saved) {
+        return { shifts: DEFAULT_SHIFTS, threshold: DEFAULT_THRESHOLD };
+    }
+
+    try {
+        const parsed = JSON.parse(saved) as Partial<AppSettings>;
+        return {
+            shifts: parsed.shifts || DEFAULT_SHIFTS,
+            threshold: parsed.threshold || DEFAULT_THRESHOLD,
+        };
+    } catch (error) {
+        console.error('Failed to parse settings', error);
+        return { shifts: DEFAULT_SHIFTS, threshold: DEFAULT_THRESHOLD };
+    }
+}
+
+export default function SettingsPanel({ isOpen, onClose, onSettingsChange }: SettingsPanelProps) {
+    const initialSettings = loadInitialSettings();
+    const [shifts, setShifts] = useState<string[]>(initialSettings.shifts);
+    const [threshold, setThreshold] = useState<number>(initialSettings.threshold);
+    const [newShift, setNewShift] = useState('');
+
     useEffect(() => {
-        const saved = localStorage.getItem('rekap_telat_settings');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                setShifts(parsed.shifts || DEFAULT_SHIFTS);
-                setThreshold(parsed.threshold || DEFAULT_THRESHOLD);
-                onSettingsChange(parsed);
-            } catch (e) {
-                console.error("Failed to parse settings", e);
-            }
-        } else {
-            onSettingsChange({ shifts: DEFAULT_SHIFTS, threshold: DEFAULT_THRESHOLD });
-        }
-    }, []);
+        onSettingsChange({ shifts, threshold });
+    }, [onSettingsChange, shifts, threshold]);
 
     const handleSave = () => {
         const newSettings = { shifts, threshold };
@@ -56,9 +66,8 @@ export default function SettingsPanel({ isOpen, onClose, onSettingsChange }: Set
         if (newShift && !shifts.includes(newShift)) {
             // Basic validation
             if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(newShift)) return;
-            setShifts([...shifts].sort());
             setShifts(prev => [...prev, newShift].sort());
-            setNewShift("");
+            setNewShift('');
         }
     };
 

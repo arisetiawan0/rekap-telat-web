@@ -7,6 +7,7 @@ import {
     PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Sector,
     BarChart, Bar,
 } from 'recharts';
+import type { PieSectorDataItem } from 'recharts/types/polar/Pie';
 import { motion } from 'framer-motion';
 import { CHART_COLORS } from '@/lib/utils';
 
@@ -17,17 +18,34 @@ interface AnalyticsDashboardProps {
 // ============================================
 // Custom Tooltip
 // ============================================
-const CustomTooltip = ({ active, payload, label, unit }: any) => {
+interface CustomTooltipEntry {
+    color?: string;
+    name?: string;
+    value?: string | number;
+    payload?: {
+        fill?: string;
+    };
+}
+
+interface CustomTooltipProps {
+    active?: boolean;
+    label?: string;
+    payload?: CustomTooltipEntry[];
+    unit?: string;
+}
+
+const CustomTooltip = ({ active, payload, label, unit }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
+        const item = payload[0];
         return (
             <div className="bg-zinc-950/95 backdrop-blur-xl border border-white/8 p-3 rounded-xl shadow-2xl">
                 <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
-                    {label || payload[0].name}
+                    {label || item.name}
                 </p>
                 <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill || payload[0].color }} />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.payload?.fill || item.color }} />
                     <p className="text-sm font-bold text-white">
-                        {payload[0].value} <span className="text-zinc-500 font-medium text-xs">{unit || 'Kejadian'}</span>
+                        {item.value} <span className="text-zinc-500 font-medium text-xs">{unit || 'Kejadian'}</span>
                     </p>
                 </div>
             </div>
@@ -39,8 +57,16 @@ const CustomTooltip = ({ active, payload, label, unit }: any) => {
 // ============================================
 // Active Pie Sector
 // ============================================
-const renderActiveShape = (props: any) => {
-    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+const renderActiveShape = (props: PieSectorDataItem) => {
+    const {
+        cx = 0,
+        cy = 0,
+        innerRadius = 0,
+        outerRadius = 0,
+        startAngle = 0,
+        endAngle = 0,
+        fill = '#22d3ee',
+    } = props;
     return (
         <g>
             <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 6} startAngle={startAngle} endAngle={endAngle} fill={fill} stroke="#fff" strokeWidth={1} strokeOpacity={0.1} />
@@ -120,7 +146,7 @@ export default function AnalyticsDashboard({ stats }: AnalyticsDashboardProps) {
                                     onMouseLeave={() => setActiveShiftIdx(undefined)}
                                     animationDuration={1000}
                                     stroke="none"
-                                    shape={(props: any) => props.index === activeShiftIdx ? renderActiveShape(props) : <Sector {...props} />}
+                                    shape={(props) => props.index === activeShiftIdx ? renderActiveShape(props) : <Sector {...props} />}
                                 >
                                     {stats.shiftDistribution.map((_, i) => (
                                         <Cell key={`cell-${i}`} fill={CHART_COLORS[i % CHART_COLORS.length]} className="outline-none cursor-pointer" />
@@ -214,7 +240,7 @@ export default function AnalyticsDashboard({ stats }: AnalyticsDashboardProps) {
                                     onMouseLeave={() => setActiveSevIdx(undefined)}
                                     animationDuration={1000}
                                     stroke="none"
-                                    shape={(props: any) => props.index === activeSevIdx ? renderActiveShape(props) : <Sector {...props} />}
+                                    shape={(props) => props.index === activeSevIdx ? renderActiveShape(props) : <Sector {...props} />}
                                 >
                                     {stats.severityBreakdown.map((entry, i) => (
                                         <Cell key={`cell-sev-${i}`} fill={entry.color} className="outline-none cursor-pointer" />

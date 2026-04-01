@@ -1,7 +1,7 @@
 'use client';
 
 import type { AttendanceRecord, SortConfig, FilterState } from '@/lib/types';
-import { cn, exportToExcel, exportToCSV, getSeverityLevel, getSeverityColor, getSeverityBg } from '@/lib/utils';
+import { cn, exportToExcel, exportToCSV, getSeverityLevel } from '@/lib/utils';
 import { ChevronLeft, ChevronRight, Search, ArrowUpDown, ArrowUp, ArrowDown, Clock, AlertCircle, FileSpreadsheet, Download, Filter, X } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';

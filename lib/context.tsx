@@ -91,7 +91,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
-    // Load sessions from Supabase on mount, then auto-load latest
+    // Load saved sessions on mount, then auto-load the latest one
     useEffect(() => {
         (async () => {
             setSessionsLoading(true);
@@ -157,7 +157,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             setSummary(result.summary);
             setCurrentFileName(file.name);
 
-            // Save to Supabase
+            // Persist processed result to the database
             const sessionId = await createSession(file.name, result.summary, result.data);
             if (sessionId) {
                 setCurrentSessionId(sessionId);

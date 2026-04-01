@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import type { AttendanceRecord, SummaryStats, EmployeeSummary } from '@/lib/types';
-import { getSeverityLevel, formatDuration } from '@/lib/utils';
+import { getSeverityLevel } from '@/lib/utils';
 
 type TabKey = 'analytics' | 'data';
 
